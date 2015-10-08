@@ -12,69 +12,110 @@ import java.util.List;
  */
 public class State {
 
-    private class StateAction {
-        private City target;
-        private long reward;
+    public void setBestAction(StateAction bestAction) {
+        this.bestAction = bestAction;
+    }
 
-        public StateAction(City target) {
-            this.target = target;
-            if (target == null){ //if this action is an PICK action
+    public StateAction getBestAction() {
+        return bestAction;
+    }
 
-                double total_weights = 0.0;
-                double total_reward = 0.0;
-                for (City c : topology.cities()) {
-                    if (c != city) {
-                        total_reward += (dist.reward(city, c) - city.distanceUnitsTo(c)) * dist.probability(city, c);
-                        total_weights += dist.probability(city, c);
-                    }
-                }
-                reward = (long) -(total_reward/total_weights);
+    public class StateAction {
+        private City nextCity;
+        private boolean isDeliver;
+        private ArrayList<State> nextPossibleStates;
+        private double R = 0;
+
+        public double getR() {
+            return R;
+        }
+        //private long reward;
+
+        public StateAction(City nextCity, City from, boolean isDelivery, ArrayList<State> states) {
+            this.nextCity = nextCity;
+            this.isDeliver = isDelivery;
+            this.nextPossibleStates = new ArrayList<State>();
+            for(State s : states){
+                if(s.city == nextCity)
+                    this.nextPossibleStates.add(s);
             }
-            else{
-                reward = -city.distanceUnitsTo(target);
-            }
+
+
+            if(isDelivery)
+                R = dist.reward(from,nextCity);
+            R -= from.distanceTo(nextCity);
         }
 
-        public long getNetReward() {
-            return reward;
+
+        public double getNextStateValue(){
+            double sum = 0;
+            for(State s : nextPossibleStates) {
+                sum += dist.probability(s.city, s.taskTo) * s.getV();
+            }
+            return sum;
         }
 
         @Override
         public String toString() {
-            if(this.target != null)
-                return "Move to: " + target.toString() + " : " + reward;
-            else
-                return "Pick the task average reward: " + reward;
+            String str = "";
+            /*for(State s : nextPossibleStates)
+                str += "\t" + s.city.toString() +  " with task to " + s.taskTo +  (isDeliver ? " Delivery " : " Move " )+  "\n";
+            */
+            str += (isDeliver ? " Deliver it! " : (" Move to " + nextCity.toString()));
+            return str;
         }
     }
 
-    private boolean withTask;
+    private City taskTo;
     private TaskDistribution dist;
+
+    public City getCity() {
+        return city;
+    }
+
     private City city;
     private Topology topology;
+    private ArrayList<State> states;
     public ArrayList<StateAction> actionsList;
+    private double V;
+    private StateAction bestAction = null;
 
-    public State(boolean withTask, City city, TaskDistribution dist, Topology topology) {
-        this.withTask = withTask;
-        this.city = city;
+    public double getV() {
+        return V;
+    }
+
+    public void setV(double v) {
+        V = v;
+    }
+
+    public State(City city, City taskTo, TaskDistribution dist, Topology topology, ArrayList<State> states) {
+        this.taskTo = taskTo;
+        this.city= city;
         this.dist = dist;
         this.topology = topology;
+        this.states = states;
+        this.V = 1;
+    }
+
+    public void buildActions(){
         this.actionsList = new ArrayList<StateAction>();
-
-        //creating possible actions for this state object (actually this state is a (City,has_task) tuple.
-        for(City neighbour : city.neighbors())
-            actionsList.add(new StateAction(neighbour));
-        if(withTask)
-            actionsList.add(new StateAction(null)); //means create a dummy StateAction for PICK action
+        //first add neighbours and GO action
+        for(City neighbour : this.city.neighbors()){
+            this.actionsList.add(new StateAction(neighbour,city,false,states));
+        }
+        if(taskTo != null) {
+            this.actionsList.add(new StateAction(taskTo, city, true, states));
+        }
     }
 
-    public void printRewards(){
-        System.out.println(city.toString() + " - " + "Has Task?: " + withTask);
-        for(StateAction sa : actionsList)
-            System.out.println("\t" + sa.toString());
+
+
+    @Override
+    public String toString() {
+        String str = this.city.toString() + " with task to: " + taskTo;
+        /*for(StateAction sa : actionsList)
+            str += sa.toString(); */
+        return str;
+
     }
-
-//    public List<>
-
-
 }

@@ -35,12 +35,46 @@ public class ReactiveTemplate implements ReactiveBehavior {
         //Also the R(s,a) table.
         this.statesList = new ArrayList<State>();
         for(City c : topology.cities()){
-            statesList.add(new State(true, c, td, topology));
-            statesList.add(new State(false, c, td, topology));
+            statesList.add(new State(c,null, td, topology,statesList));
+			for(City n : topology.cities()){
+				if(!n.equals(c)){
+					statesList.add(new State(c,n, td, topology,statesList));
+				}
+			}
         }
 
-        //for(State s : statesList)
-        //    s.printRewards();
+		for(State s : statesList){
+			s.buildActions();
+		}
+
+
+		for(int i = 0 ; i < 100 ; i++) {
+			for (State s : statesList) {
+				double maxV = -Double.MAX_VALUE;
+				State.StateAction bestAction = null;
+				for (State.StateAction sa : s.actionsList) {
+					double tempV = discount * sa.getNextStateValue() + sa.getR();
+					if (tempV > maxV) {
+						bestAction = sa;
+						maxV = tempV;
+					}
+				}
+				s.setV(maxV);
+				s.setBestAction(bestAction);
+			}
+			/*for(State s : statesList) {
+				System.out.print(s.getV() + "\t");
+			}
+			System.out.print("\n");*/
+		}
+
+		for(State s : statesList) {
+			System.out.println(s.toString() + " -> " + s.getBestAction());
+		}
+
+
+
+
 
 
 
