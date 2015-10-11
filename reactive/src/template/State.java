@@ -21,7 +21,16 @@ public class State {
     }
 
     public class StateAction {
+        public City getNextCity() {
+            return nextCity;
+        }
+
         private City nextCity;
+
+        public boolean isDeliver() {
+            return isDeliver;
+        }
+
         private boolean isDeliver;
         private ArrayList<State> nextPossibleStates;
         private double R = 0;
@@ -64,6 +73,10 @@ public class State {
             str += (isDeliver ? " Deliver it! " : (" Move to " + nextCity.toString()));
             return str;
         }
+    }
+
+    public City getTaskTo() {
+        return taskTo;
     }
 
     private City taskTo;
