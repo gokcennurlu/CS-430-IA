@@ -22,19 +22,19 @@ public class ReactiveLearning implements ReactiveBehavior {
     private ArrayList<State> statesList;
     private double discount;
 
-	@Override
-	public void setup(Topology topology, TaskDistribution td, Agent agent) {
+    @Override
+    public void setup(Topology topology, TaskDistribution td, Agent agent) {
 
-		// Reads the discount factor from the agents.xml file.
-		// If the property is not present it defaults to 0.95
-		this.discount = agent.readProperty("discount-factor", Double.class, 0.95);
+        // Reads the discount factor from the agents.xml file.
+        // If the property is not present it defaults to 0.95
+        this.discount = agent.readProperty("discount-factor", Double.class, 0.95);
 
         //Also the R(s,a) table.
-		this.generateStates(topology);
+        this.generateStates(topology);
 
-		for(State state : statesList){
-			state.buildActions(td, statesList);
-		}
+        for(State state : statesList){
+            state.buildActions(td, statesList);
+        }
 
         this.valueIteration();
 
@@ -42,53 +42,53 @@ public class ReactiveLearning implements ReactiveBehavior {
 			System.out.println(s.toString() + " -> " + s.getBestAction());
 		}*/
 
-	}
+    }
 
     @Override
-	public Action act(Vehicle vehicle, Task availableTask) {
-		Action action;
+    public Action act(Vehicle vehicle, Task availableTask) {
+        Action action;
 
-		City currentCity = vehicle.getCurrentCity();
-		if (availableTask == null) {
-			for(State s : statesList){
-				if(s.getCity() == currentCity && s.getTaskTo() == null){
-					return new Move(s.getBestAction().getNextCity());
-				}
-			}
-			System.out.println("State couldn't identified!");
-			return new Move(currentCity.randomNeighbor(new Random()));
+        City currentCity = vehicle.getCurrentCity();
+        if (availableTask == null) {
+            for(State s : statesList){
+                if(s.getCity() == currentCity && s.getTaskTo() == null){
+                    return new Move(s.getBestAction().getNextCity());
+                }
+            }
+            System.out.println("State couldn't identified!");
+            return new Move(currentCity.randomNeighbor(new Random()));
 
-		} else {
-			for(State s : statesList){
-				if(s.getCity() == currentCity && s.getTaskTo() == availableTask.deliveryCity){
+        } else {
+            for(State s : statesList){
+                if(s.getCity() == currentCity && s.getTaskTo() == availableTask.deliveryCity){
 					/*action = new Move(s.getBestAction().getNextCity());
 					return action;*/
-					StateAction bestAction = s.getBestAction();
-					if(bestAction.isDeliver()){
-						return new Pickup(availableTask);
-					}else{
-						return new Move(s.getBestAction().getNextCity());
-					}
-				}
-			}
-			System.out.println("State couldn't identified!");
-			return new Pickup(availableTask);
-		}
-	}
+                    StateAction bestAction = s.getBestAction();
+                    if(bestAction.isDeliver()){
+                        return new Pickup(availableTask);
+                    }else{
+                        return new Move(s.getBestAction().getNextCity());
+                    }
+                }
+            }
+            System.out.println("State couldn't identified!");
+            return new Pickup(availableTask);
+        }
+    }
 
-	private void generateStates(Topology topology){
-		this.statesList = new ArrayList<State>();
-		for(City city : topology.cities()){
+    private void generateStates(Topology topology){
+        this.statesList = new ArrayList<State>();
+        for(City city : topology.cities()){
 
-			statesList.add(new State(city, null));
+            statesList.add(new State(city, null));
 
-			for(City deliverCity : topology.cities()){
-				if(!deliverCity.equals(city)){
-					statesList.add(new State(city, deliverCity));
-				}
-			}
-		}
-	}
+            for(City deliverCity : topology.cities()){
+                if(!deliverCity.equals(city)){
+                    statesList.add(new State(city, deliverCity));
+                }
+            }
+        }
+    }
 
     private void valueIteration() {
         double biggestChange;
