@@ -28,6 +28,7 @@ public class ReactiveLearning implements ReactiveBehavior {
         // Reads the discount factor from the agents.xml file.
         // If the property is not present it defaults to 0.95
         this.discount = agent.readProperty("discount-factor", Double.class, 0.95);
+        //this.discount = 0.80;
 
         //Also the R(s,a) table.
         this.generateStates(topology);
