@@ -23,7 +23,7 @@ public class StateAction {
         this.nextCity = nextCity;
         this.isDeliver = isDelivery;
         this.dist = dist;
-        this.nextPossibleStates = new ArrayList<>();
+        this.nextPossibleStates = new ArrayList<State>();
 
         this.setR(fromCity, isDelivery);
         this.generateNextStates(allStates);
