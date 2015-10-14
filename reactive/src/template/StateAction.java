@@ -10,6 +10,9 @@ import java.util.ArrayList;
  */
 public class StateAction {
 
+    // All the vehicles have this set to five, so we will just use this. Se report for further argument.
+    private static int costPerKm = 5;
+
     private City nextCity;
     private boolean isDeliver;
     private final TaskDistribution dist;
@@ -30,7 +33,7 @@ public class StateAction {
     private void setR(City fromCity, boolean isDelivery) {
         if(isDelivery)
             R = dist.reward(fromCity, nextCity);
-        R -= fromCity.distanceTo(nextCity);
+        R -= fromCity.distanceTo(nextCity) * costPerKm;
     }
 
     private void generateNextStates(ArrayList<State> allStates) {

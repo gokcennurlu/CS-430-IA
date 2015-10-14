@@ -33,7 +33,7 @@ public class State {
     public State(City city, City taskTo) {
         this.taskTo = taskTo;
         this.city = city;
-        this.V = 1;
+        this.V = 0;
         this.bestAction = null;
     }
 
