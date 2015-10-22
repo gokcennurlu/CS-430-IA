@@ -57,24 +57,32 @@ public class Deliberative implements DeliberativeBehavior {
 		Plan plan;
 
 		// Build State graph
-//		states = new HashSet<State>();
+		states = new HashSet<State>();
 		System.out.println(tasks.size());
-		State startState = new State(new HashSet<Task>(), tasks.clone());
-		State goalState = new State(new HashSet<Task>(), new HashSet<Task>());
+		State startState = new State(new HashSet<Task>(), tasks.clone(), vehicle.getCurrentCity(),0, states);
+		startState.LEVEL = 1;
+		State goalState = new State(new HashSet<Task>(), new HashSet<Task>(), null, 99, states);
 		
-//		states.add(startState);
-		
+		states.add(startState);
 		Queue<State> state_queue = new LinkedList<State>();
 		state_queue.add(startState);
+		//for(int i = 0; i < 10000000 ; i++)
 		while(!state_queue.isEmpty())
 		{
 			State currentState = state_queue.poll();
-			state_queue.addAll(currentState.buildChildren(goalState));
-			System.out.println(state_queue.size());
+			LinkedList<State> generated = currentState.buildChildren(goalState);
+			state_queue.addAll(generated);
+			//System.out.println(state_queue.size());
+			/*System.out.println("CURRENT STATE: " + currentState.toString());
+			System.out.println("GENERATED;");
+			for(State s: generated)
+				System.out.println("\t" + s.toString());
+				*/
 		}
 
-		
-		startState.prettyPrint();
+
+		//startState.prettyPrint();
+		System.out.println("Size: " + states.size());
 		
 		// Compute the plan with the selected algorithm.
 		switch (algorithm) {
