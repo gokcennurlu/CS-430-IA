@@ -1,10 +1,7 @@
 package template;
 
 /* import table */
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.Queue;
-import java.util.Set;
+import java.util.*;
 
 import logist.simulation.Vehicle;
 import logist.agent.Agent;
@@ -22,8 +19,17 @@ import logist.topology.Topology.City;
 @SuppressWarnings("unused")
 public class Deliberative implements DeliberativeBehavior {
 
+	public static int getHashInitialMapSize(int n) {
+		if(n < 6)
+			return 16;
+		//an observation. 6 sample generates  => ~1800 states. 7=>~6.000
+		//8 => ~20.000, 9 => ~60.000, 10 => 210.000, 11 => 660.000 etc.
+		//this fits well..
+		return (int) (1800*Math.pow(3,n-6));
+	}
+
 	enum Algorithm { BFS, ASTAR }
-	private Set<State> states;
+	private HashMap<State,State> states;
 	
 	/* Environment */
 	Topology topology;
@@ -57,33 +63,40 @@ public class Deliberative implements DeliberativeBehavior {
 		Plan plan;
 
 		// Build State graph
-		states = new HashSet<State>();
+		states = new HashMap<State, State>(getHashInitialMapSize(tasks.size()));
 		System.out.println(tasks.size());
 		State startState = new State(new HashSet<Task>(), tasks.clone(), vehicle.getCurrentCity(),0, states);
 		startState.LEVEL = 1;
-		State goalState = new State(new HashSet<Task>(), new HashSet<Task>(), null, 99, states);
+		//State goalState = new State(new HashSet<Task>(), new HashSet<Task>(), null, 99, states);
 		
-		states.add(startState);
+		states.put(startState, startState);
 		Queue<State> state_queue = new LinkedList<State>();
 		state_queue.add(startState);
-		//for(int i = 0; i < 10000000 ; i++)
 		while(!state_queue.isEmpty())
 		{
 			State currentState = state_queue.poll();
-			LinkedList<State> generated = currentState.buildChildren(goalState);
+			LinkedList<State> generated = currentState.buildChildren(vehicle);
 			state_queue.addAll(generated);
-			//System.out.println(state_queue.size());
+
 			/*System.out.println("CURRENT STATE: " + currentState.toString());
 			System.out.println("GENERATED;");
 			for(State s: generated)
 				System.out.println("\t" + s.toString());
-				*/
+			*/
 		}
 
+		System.out.println("Total number of states: " + states.size());
 
-		//startState.prettyPrint();
-		System.out.println("Size: " + states.size());
-		
+		/*Collections.sort(states, new Comparator<State>() {
+			public int compare(State one, State other) {
+				return one.LEVEL - other.LEVEL;
+			}
+		});
+		*/
+		/*for(State s: states.values()){
+			System.out.println(s);
+		}*/
+
 		// Compute the plan with the selected algorithm.
 		switch (algorithm) {
 		case ASTAR:
