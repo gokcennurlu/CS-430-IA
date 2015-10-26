@@ -2,6 +2,7 @@ package template;
 
 /* import table */
 import java.util.*;
+import java.util.concurrent.SynchronousQueue;
 
 import logist.simulation.Vehicle;
 import logist.agent.Agent;
@@ -105,7 +106,7 @@ public class Deliberative implements DeliberativeBehavior {
 			break;
 		case BFS:
 			// ...
-			plan = naivePlan(vehicle, tasks);
+			plan = BFS(vehicle, tasks, startState);
 			break;
 		default:
 			throw new AssertionError("Should not happen.");
@@ -135,10 +136,81 @@ public class Deliberative implements DeliberativeBehavior {
 		}
 		return plan;
 	}
+
+	public Plan generatePlan(Vehicle vehicle, State endState, TaskSet tasks){
+		State current = endState;
+		List<State> stateList = new LinkedList<State>();
+		List<Task> finalTasks = new LinkedList<Task>();
+
+		City currentCity = vehicle.getCurrentCity();
+		Plan plan = new Plan(currentCity);
+
+		while(current != null) {
+			stateList.add(0,current);
+			current = current.ancestorState;
+		}
+		for(int i = 0; i < stateList.size() - 1; i++){
+			State cur = stateList.get(i);
+			System.out.println("\t" + cur.toString());
+			Set<Task> droppedTasks = new HashSet<Task>(cur.currentTasks);
+			droppedTasks.removeAll(stateList.get(i+1).currentTasks);
+			System.out.println("\n\n\t\tDropped: " + droppedTasks);
+			Set<Task> pickedTasks = new HashSet<Task>(cur.remainingTasks);
+			pickedTasks.removeAll(stateList.get(i+1).remainingTasks);
+			System.out.println("\t\tPicked: " + pickedTasks);
+			System.out.println("\t\tNow at: " + stateList.get(i+1).currentCity);
+
+			City target = null;
+			if(!pickedTasks.isEmpty())
+				target = pickedTasks.iterator().next().pickupCity;
+			else if(!droppedTasks.isEmpty())
+				target = droppedTasks.iterator().next().deliveryCity;
+
+			if(target!=null)
+				for (City city : cur.currentCity.pathTo(target))
+					plan.appendMove(city);
+
+			for(Task picked: pickedTasks){
+				plan.appendPickup(picked);
+			}
+			for(Task dropped: droppedTasks)
+				plan.appendDelivery(dropped);
+		}
+		return plan;
+	}
 	
 	private Plan AStar(Vehicle vehicle, TaskSet tasks) {
 		return new Plan(vehicle.getCurrentCity());
 	}
+	private Plan BFS(Vehicle vehicle, TaskSet tasks, State startState) {
+		Queue<State> bfs_queue = new LinkedList<State>();
+		bfs_queue.add(startState);
+		State solution = null;
+		int count = 0;
+		while (!bfs_queue.isEmpty()){
+			State head = bfs_queue.poll();
+			//System.out.println("vis:" + head.visited);
+			head.visited = true;
+			//System.out.println("Now at " + head + " HASH: " + head.hashCode() + ". head: " + head.ancestorState);
+			for(State child: head.children){
+				if(!child.visited && !child.inQueue){
+					child.ancestorState = head;
+					if(child.isFinalState()) {
+						solution = child;
+						break;
+					}
+					bfs_queue.add(child);
+					child.inQueue = true;
+				}
+			}
+			if(solution != null)
+				break;
+		}
+		bfs_queue.clear();
+		return generatePlan(vehicle, solution, tasks);
+	}
+
+
 
 	@Override
 	public void planCancelled(TaskSet carriedTasks) {

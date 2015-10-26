@@ -10,10 +10,15 @@ import logist.topology.Topology.City;
 import javax.sound.midi.SysexMessage;
 
 public class State {
-	private Set<Task> currentTasks;
-	private Set<Task> remainingTasks;
-	private City currentCity;
-	private Set<State> children;
+	public Set<Task> currentTasks;
+	public Set<Task> remainingTasks;
+	public City currentCity;
+
+	public boolean visited;
+	public boolean inQueue = false;
+	public State ancestorState;
+
+	public Set<State> children;
 	public int LEVEL;
 	private HashMap<State,State> allStates;
 	public State(Set<Task> currentTasks, Set<Task> remainingTasks,City currentCity, int level, HashMap<State,State> allStates) {
@@ -41,6 +46,9 @@ public class State {
 		*/
 	}
 
+	public boolean isFinalState(){
+		return (this.currentTasks.isEmpty() && this.remainingTasks.isEmpty());
+	}
 
 	public LinkedList<State> buildChildren(Vehicle vehicle) {
 		LinkedList<State> newChildren = new LinkedList<State>();
@@ -120,7 +128,7 @@ public class State {
 				}
 			}
 			else{
-				System.out.println("Wohoo");
+				System.out.println("Due to Vehicle Capacity, impossible to pick new task.");
 			}
 		}
 		return newChildren;
@@ -144,12 +152,13 @@ public class State {
 		for(Task s : this.remainingTasks) {
 			str += s.id + ",";
 		}
+		//str+= "\t\tfrom: " + this.ancestorState;
 		return str;
 	}
 
 	@Override
 	public int hashCode() {
-		return currentTasks.hashCode() + remainingTasks.hashCode() + currentCity.hashCode();
+		return currentTasks.hashCode()*31 + remainingTasks.hashCode() + 17*currentCity.hashCode();
 	}
 
 	@Override
