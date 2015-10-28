@@ -71,16 +71,16 @@ public class Deliberative implements DeliberativeBehavior {
 		// Compute the plan with the selected algorithm.
 		switch (algorithm) {
 		case ASTAR:
-			AStar astar = new AStar(vehicle, tasks, startState);
+			AStar astar = new AStar(vehicle, startState);
 			plan = astar.search();
 			break;
 		case BFS:
 			// ...
-			BFS bfs = new BFS(vehicle, tasks, startState);
+			BFS bfs = new BFS(vehicle, startState);
 			plan = bfs.search();
 			break;
 		case DIJKSTRA:
-			Dijkstra dijkstra = new Dijkstra(vehicle, tasks, startState);
+			Dijkstra dijkstra = new Dijkstra(vehicle, startState);
 			plan = dijkstra.search();
 			break;
 		default:
@@ -94,19 +94,15 @@ public class Deliberative implements DeliberativeBehavior {
 		Plan plan = new Plan(current);
 
 		for (Task task : tasks) {
-			// move: current city => pickup location
 			for (City city : current.pathTo(task.pickupCity))
 				plan.appendMove(city);
 
 			plan.appendPickup(task);
 
-			// move: pickup location => delivery location
 			for (City city : task.path())
 				plan.appendMove(city);
 
 			plan.appendDelivery(task);
-
-			// set current city
 			current = task.deliveryCity;
 		}
 		return plan;

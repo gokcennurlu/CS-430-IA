@@ -17,16 +17,13 @@ import logist.topology.Topology.City;
 public abstract class GenericSearch {
 	protected PriorityQueue<State> queue;
 	private Vehicle vehicle;
-	private TaskSet tasks;
 	private State startState;
 	private HashMap<State,State> states;
 
-	public GenericSearch(Vehicle vehicle, TaskSet tasks, State startState) {
+	public GenericSearch(Vehicle vehicle, State startState) {
 		super();
 		this.vehicle = vehicle;
-		this.tasks = tasks;
 		this.startState = startState;
-		
 		this.states = new HashMap<State, State>();
 		states.put(startState, startState);
 	}
@@ -69,41 +66,28 @@ public abstract class GenericSearch {
 	}
 	
 	private Plan generatePlan(Vehicle vehicle, State endState){
-//		Generate plan from the solution to the start	
+		//Generate plan from the solution to the start
 		State current = endState;
 		List<State> stateList = new LinkedList<State>();
 
 		City currentCity = vehicle.getCurrentCity();
 		Plan plan = new Plan(currentCity);
 
-//		Create a list of all states in plan
+		//Create a list of all states in plan
 		while(current != null) {
 			stateList.add(0,current);
 			current = current.ancestor;
 		}
-		
-		System.out.println(stateList);
-		
-		//for (State state : stateList) {
-		//	System.out.println(state.g);
-		//}
-		
+
 		for(int i = 0; i < stateList.size() - 1; i++){
-//			System.out.println(stateList.get(i).g);
 			State cur = stateList.get(i);
-//			System.out.println("\t" + cur.toString());
-			
-//			Find change in current task in this state and the next state
+			//Find change in current task in this state and the next state
 			Set<Task> droppedTasks = new HashSet<Task>(cur.currentTasks);
 			droppedTasks.removeAll(stateList.get(i+1).currentTasks);
-//			System.out.println("\n\n\t\tDropped: " + droppedTasks);
 			
-//			Find change in remaining tasks in this state and next state 
+			//Find change in remaining tasks in this state and next state
 			Set<Task> pickedTasks = new HashSet<Task>(cur.remainingTasks);
 			pickedTasks.removeAll(stateList.get(i+1).remainingTasks);
-//			System.out.println("\t\tPicked: " + pickedTasks);
-			
-//			System.out.println("\t\tNow at: " + stateList.get(i+1).currentCity);
 
 			City target = null;
 			if(!pickedTasks.isEmpty())

@@ -16,15 +16,15 @@ public class State {
 	public City currentCity;
 
 	public boolean visited;
-	public boolean inQueue = false;
 	public State ancestor;
 	private Topology topology;
 	
 	public double g;
+	public double h;
 
 	public HashSet<State> children;
 	public int LEVEL;
-	private HashMap<State,State> allStates;
+
 	public State(Set<Task> currentTasks, Set<Task> remainingTasks,City currentCity, State ancestor, Topology topology) {
 		this.currentTasks = currentTasks;
 		this.remainingTasks = remainingTasks;
@@ -40,6 +40,8 @@ public class State {
 			this.LEVEL = ancestor.LEVEL + 1;
 			this.g = ancestor.g + ancestor.currentCity.distanceTo(this.currentCity);
 		}
+
+		this.h = h();
 		
 	}
 
@@ -70,8 +72,7 @@ public class State {
 					count+=1;
 				}
 			}
-			
-			//System.out.println("Reduced " + count);
+
 			this.children.add(new State(tasks, this.remainingTasks, task.deliveryCity, this, topology));
 
 			//we also sum up the total weight we have now.
@@ -86,8 +87,6 @@ public class State {
 
 				Set<Task> newRemainingTasks = new HashSet<Task>(this.remainingTasks);
 				newRemainingTasks.remove(task);
-				
-				// TODO: Generate all combinations
 
 				/* optimization?
 				We are generating the next State where we pick the 'task'.
@@ -95,12 +94,10 @@ public class State {
 				But, if there other packages (in currentTasks) that we can drop at that same city, why not drop them all
 				while picking this new task?
 				*/
-				int count = 0;
 				for (Iterator<Task> i = newCurrenttasks.iterator(); i.hasNext();) {
 					Task t = i.next();
 					if (t.deliveryCity == task.pickupCity && t!=task) {
 						i.remove();
-						count+=1;
 					}
 				}
 
@@ -112,13 +109,6 @@ public class State {
 			}
 		}
 		return this.children;
-	}
-	
-	public void prettyPrint() {
-		/*System.out.println(this.currentTasks.toString() + " : " + this.remainingTasks.toString());
-		for(State child : this.children) {
-			System.out.print(" | " + child.toString());
-		}*/
 	}
 
 	@Override
@@ -132,7 +122,6 @@ public class State {
 		for(Task s : this.remainingTasks) {
 			str += s.id + ",";
 		}
-		//str+= "\t\tfrom: " + this.ancestorState;
 		return str;
 	}
 
@@ -154,7 +143,7 @@ public class State {
 	}
 	
 	public double f() {
-		return this.g + this.h();
+		return this.g + this.h;
 	}
 	
 	private double h() {
