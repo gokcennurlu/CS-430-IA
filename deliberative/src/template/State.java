@@ -5,11 +5,12 @@ import java.util.*;
 import logist.plan.Action;
 import logist.simulation.Vehicle;
 import logist.task.Task;
+import logist.topology.Topology;
 import logist.topology.Topology.City;
 
 import javax.sound.midi.SysexMessage;
 
-public class State {
+public class State implements Comparator<State>, Comparable<State> {
 	public Set<Task> currentTasks;
 	public Set<Task> remainingTasks;
 	public City currentCity;
@@ -17,21 +18,25 @@ public class State {
 	public boolean visited;
 	public boolean inQueue = false;
 	public State ancestorState;
+	private Topology topology;
+	
+	public double g;
 
 	public Set<State> children;
 	public int LEVEL;
 	private HashMap<State,State> allStates;
-	public State(Set<Task> currentTasks, Set<Task> remainingTasks,City currentCity, int level, HashMap<State,State> allStates) {
+	public State(Set<Task> currentTasks, Set<Task> remainingTasks,City currentCity, int level, double g, HashMap<State,State> allStates) {
 		this.currentTasks = currentTasks;
 		this.remainingTasks = remainingTasks;
 		this.currentCity = currentCity;
 		this.children = new HashSet<State>();
 		this.LEVEL = level;
+		this.g = g;
 		this.allStates = allStates;
 	}
 
 	public State alreadyAdded(Set<Task> currentTasks, Set<Task> remainingTasks,City currentCity){
-		State dummy = new State(currentTasks, remainingTasks,currentCity, -1, null);
+		State dummy = new State(currentTasks, remainingTasks,currentCity, -1, 0, null);
 		if(allStates.containsKey(dummy))
 			return allStates.get(dummy);
 		return null;
@@ -77,7 +82,8 @@ public class State {
 
 			State s = alreadyAdded(tasks, this.remainingTasks, task.deliveryCity);
 			if(s == null){
-				State candidate = new State(tasks, this.remainingTasks, task.deliveryCity, this.LEVEL+1, allStates);
+				double g = this.currentCity.distanceTo(task.deliveryCity);
+				State candidate = new State(tasks, this.remainingTasks, task.deliveryCity, this.LEVEL+1, g, allStates);
 				this.children.add(candidate);
 				newChildren.add(candidate);
 				allStates.put(candidate,candidate);
@@ -118,7 +124,8 @@ public class State {
 
 				State s = alreadyAdded(newCurrenttasks, newRemainingTasks, task.pickupCity);
 				if (s == null) {
-					State candidate = new State(newCurrenttasks, newRemainingTasks, task.pickupCity, this.LEVEL + 1, allStates);
+					double g = this.currentCity.distanceTo(task.deliveryCity);
+					State candidate = new State(newCurrenttasks, newRemainingTasks, task.pickupCity, this.LEVEL + 1, g, allStates);
 					this.children.add(candidate);
 					newChildren.add(candidate);
 					allStates.put(candidate,candidate);
@@ -173,6 +180,16 @@ public class State {
 		return other.currentTasks.equals(this.currentTasks) && other.remainingTasks.equals(this.remainingTasks) && other.currentCity.equals(this.currentCity);
 	}
 
+	@Override
+	public int compare(State o1, State o2) {
+		if (o1.g < o2.g) return -1;
+		return 1;
+	}
 
+	@Override
+	public int compareTo(State o) {
+		if (this.g < o.g) return -1;
+		return 1;
+	}
 
 }
