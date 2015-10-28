@@ -32,6 +32,7 @@ public class Deliberative implements DeliberativeBehavior {
 
 	/* the planning class */
 	Algorithm algorithm;
+	TaskSet carried;
 	
 	@Override
 	public void setup(Topology topology, TaskDistribution td, Agent agent) {
@@ -52,17 +53,26 @@ public class Deliberative implements DeliberativeBehavior {
 	@Override
 	public Plan plan(Vehicle vehicle, TaskSet tasks) {
 		Plan plan;
+		
+		HashSet<Task> agentTasks;
+		
+		if (carried != null) {
+			agentTasks = new HashSet<Task>(carried);
+		} else {
+			agentTasks = new HashSet<Task>();
+		}
 
 		// Build State graph
 		System.out.println(tasks.size());
 		
-		State startState = new State(new HashSet<Task>(), tasks.clone(), vehicle.getCurrentCity(), null);
+		State startState = new State(agentTasks, tasks.clone(), vehicle.getCurrentCity(), null, topology);
+
 
 		// Compute the plan with the selected algorithm.
 		switch (algorithm) {
 		case ASTAR:
-			// ...
-			plan = naivePlan(vehicle, tasks);
+			AStar astar = new AStar(vehicle, tasks, startState);
+			plan = astar.search();
 			break;
 		case BFS:
 			// ...
@@ -109,11 +119,6 @@ public class Deliberative implements DeliberativeBehavior {
 
 	@Override
 	public void planCancelled(TaskSet carriedTasks) {
-		
-		if (!carriedTasks.isEmpty()) {
-			// This cannot happen for this simple agent, but typically
-			// you will need to consider the carriedTasks when the next
-			// plan is computed.
-		}
+		this.carried = carriedTasks;
 	}
 }

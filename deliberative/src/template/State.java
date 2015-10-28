@@ -10,7 +10,7 @@ import logist.topology.Topology.City;
 
 import javax.sound.midi.SysexMessage;
 
-public class State implements Comparator<State>, Comparable<State> {
+public class State {
 	public Set<Task> currentTasks;
 	public Set<Task> remainingTasks;
 	public City currentCity;
@@ -18,18 +18,20 @@ public class State implements Comparator<State>, Comparable<State> {
 	public boolean visited;
 	public boolean inQueue = false;
 	public State ancestor;
+	private Topology topology;
 	
 	public double g;
 
 	public HashSet<State> children;
 	public int LEVEL;
 	private HashMap<State,State> allStates;
-	public State(Set<Task> currentTasks, Set<Task> remainingTasks,City currentCity, State ancestor) {
+	public State(Set<Task> currentTasks, Set<Task> remainingTasks,City currentCity, State ancestor, Topology topology) {
 		this.currentTasks = currentTasks;
 		this.remainingTasks = remainingTasks;
 		this.currentCity = currentCity;
 		this.children = new HashSet<State>();
 		this.ancestor = ancestor;
+		this.topology = topology;
 		
 		if (ancestor == null) {
 			this.LEVEL = 0;
@@ -70,7 +72,7 @@ public class State implements Comparator<State>, Comparable<State> {
 			}
 			
 			//System.out.println("Reduced " + count);
-			this.children.add(new State(tasks, this.remainingTasks, task.deliveryCity, this));
+			this.children.add(new State(tasks, this.remainingTasks, task.deliveryCity, this, topology));
 
 			//we also sum up the total weight we have now.
 			totalWeightWeHave += task.weight;
@@ -102,7 +104,7 @@ public class State implements Comparator<State>, Comparable<State> {
 					}
 				}
 
-				State candidate = new State(newCurrenttasks, newRemainingTasks, task.pickupCity, this);
+				State candidate = new State(newCurrenttasks, newRemainingTasks, task.pickupCity, this, topology);
 				this.children.add(candidate);
 			}
 			else{
@@ -150,17 +152,48 @@ public class State implements Comparator<State>, Comparable<State> {
 		final State other = (State) obj;
 		return other.currentTasks.equals(this.currentTasks) && other.remainingTasks.equals(this.remainingTasks) && other.currentCity.equals(this.currentCity);
 	}
-
-	@Override
-	public int compare(State o1, State o2) {
-		if (o1.g < o2.g) return -1;
-		return 1;
+	
+	public double f() {
+		return this.g + this.h();
 	}
-
-	@Override
-	public int compareTo(State o) {
-		if (this.g < o.g) return -1;
-		return 1;
+	
+	private double h() {
+		
+		// Generate all the cities that need to be visited
+		HashSet<City> needToBeVisited = new HashSet<City>();
+		for (Task task : this.remainingTasks) {
+			needToBeVisited.add(task.deliveryCity);
+			needToBeVisited.add(task.pickupCity);
+		}
+		for (Task task : this.currentTasks) {
+			needToBeVisited.add(task.deliveryCity);
+		}
+		
+		
+		HashSet<City> alreadyConnected = new HashSet<City>();
+		alreadyConnected.add(this.currentCity);
+		needToBeVisited.remove(this.currentCity);
+		
+		double minTotalDistance = 0;
+		
+		while (alreadyConnected.size() < new Integer(needToBeVisited.size())) {
+		
+			double minDistance = Double.MAX_VALUE;
+			City nextToBeVisited = null;
+			for (City from : alreadyConnected) {
+				for (City to: needToBeVisited) {
+					double dist = from.distanceTo(to);
+					if (dist < minDistance) {
+						minDistance = dist;
+						nextToBeVisited = to;
+					}
+				}
+			}
+			minTotalDistance += minDistance;
+			minDistance = Double.MAX_VALUE;
+			alreadyConnected.add(nextToBeVisited);
+			needToBeVisited.remove(nextToBeVisited);
+		}
+		return minTotalDistance;
 	}
-
 }
