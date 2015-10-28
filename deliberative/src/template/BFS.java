@@ -19,21 +19,4 @@ public class BFS extends GenericSearch {
 			}
 		});
 	}
-
-	@Override
-	protected State getNextFromQueue() {
-		return this.queue.poll();
-	}
-
-	@Override
-	protected void addToQueue(State element) {
-		this.queue.add(element);
-		
-	}
-
-	@Override
-	protected void removeFromQueue(State element) {
-		this.queue.remove(element);
-	}
-	
 }
