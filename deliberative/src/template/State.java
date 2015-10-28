@@ -17,46 +17,36 @@ public class State implements Comparator<State>, Comparable<State> {
 
 	public boolean visited;
 	public boolean inQueue = false;
-	public State ancestorState;
-	private Topology topology;
+	public State ancestor;
 	
 	public double g;
 
-	public Set<State> children;
+	public HashSet<State> children;
 	public int LEVEL;
 	private HashMap<State,State> allStates;
-	public State(Set<Task> currentTasks, Set<Task> remainingTasks,City currentCity, int level, double g, HashMap<State,State> allStates) {
+	public State(Set<Task> currentTasks, Set<Task> remainingTasks,City currentCity, State ancestor) {
 		this.currentTasks = currentTasks;
 		this.remainingTasks = remainingTasks;
 		this.currentCity = currentCity;
 		this.children = new HashSet<State>();
-		this.LEVEL = level;
-		this.g = g;
-		this.allStates = allStates;
-	}
-
-	public State alreadyAdded(Set<Task> currentTasks, Set<Task> remainingTasks,City currentCity){
-		State dummy = new State(currentTasks, remainingTasks,currentCity, -1, 0, null);
-		if(allStates.containsKey(dummy))
-			return allStates.get(dummy);
-		return null;
-
-		/*if(!this.allStates.contains(dummy))
-			return null;
-		for(State s: this.allStates){
-			if(s.currentCity.equals(currentCity) && s.currentTasks.equals(currentTasks) && s.remainingTasks.equals(remainingTasks))
-				return s;
+		this.ancestor = ancestor;
+		
+		if (ancestor == null) {
+			this.LEVEL = 0;
+			this.g = 0;
+		} else {
+			this.LEVEL = ancestor.LEVEL + 1;
+			this.g = ancestor.g + ancestor.currentCity.distanceTo(this.currentCity);
 		}
-		return null;
-		*/
+		
 	}
 
 	public boolean isFinalState(){
 		return (this.currentTasks.isEmpty() && this.remainingTasks.isEmpty());
 	}
 
-	public LinkedList<State> buildChildren(Vehicle vehicle) {
-		LinkedList<State> newChildren = new LinkedList<State>();
+	public HashSet<State> getChildren(Vehicle vehicle) {
+		HashSet<State> newChildren = new HashSet<State>();
 		int totalWeightWeHave = 0;
 
 		//We can drop current tasks if any.
@@ -78,20 +68,9 @@ public class State implements Comparator<State>, Comparable<State> {
 					count+=1;
 				}
 			}
+			
 			//System.out.println("Reduced " + count);
-
-			State s = alreadyAdded(tasks, this.remainingTasks, task.deliveryCity);
-			if(s == null){
-				double g = this.currentCity.distanceTo(task.deliveryCity);
-				State candidate = new State(tasks, this.remainingTasks, task.deliveryCity, this.LEVEL+1, g, allStates);
-				this.children.add(candidate);
-				newChildren.add(candidate);
-				allStates.put(candidate,candidate);
-			}
-			else{
-				//System.out.println("Avoided!");
-				this.children.add(s);
-			}
+			this.children.add(new State(tasks, this.remainingTasks, task.deliveryCity, this));
 
 			//we also sum up the total weight we have now.
 			totalWeightWeHave += task.weight;
@@ -105,6 +84,8 @@ public class State implements Comparator<State>, Comparable<State> {
 
 				Set<Task> newRemainingTasks = new HashSet<Task>(this.remainingTasks);
 				newRemainingTasks.remove(task);
+				
+				// TODO: Generate all combinations
 
 				/* optimization?
 				We are generating the next State where we pick the 'task'.
@@ -120,25 +101,15 @@ public class State implements Comparator<State>, Comparable<State> {
 						count+=1;
 					}
 				}
-				//System.out.println("Reduced " + count);
 
-				State s = alreadyAdded(newCurrenttasks, newRemainingTasks, task.pickupCity);
-				if (s == null) {
-					double g = this.currentCity.distanceTo(task.deliveryCity);
-					State candidate = new State(newCurrenttasks, newRemainingTasks, task.pickupCity, this.LEVEL + 1, g, allStates);
-					this.children.add(candidate);
-					newChildren.add(candidate);
-					allStates.put(candidate,candidate);
-				} else {
-					//System.out.println("Avoided!");
-					this.children.add(s);
-				}
+				State candidate = new State(newCurrenttasks, newRemainingTasks, task.pickupCity, this);
+				this.children.add(candidate);
 			}
 			else{
 				System.out.println("Due to Vehicle Capacity, impossible to pick new task.");
 			}
 		}
-		return newChildren;
+		return this.children;
 	}
 	
 	public void prettyPrint() {

@@ -1,8 +1,5 @@
 package template;
 
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.LinkedList;
 import java.util.PriorityQueue;
 
 import logist.simulation.Vehicle;
@@ -16,13 +13,19 @@ public class Dijkstra extends GenericSearch {
 	}
 
 	@Override
-	protected State getNextElement() {
+	protected State getNextFromQueue() {
 		return this.queue.poll();
 	}
 
 	@Override
-	protected void addElement(State element) {
+	protected void addToQueue(State element) {
 		this.queue.add(element);
+		
+	}
+
+	@Override
+	protected void removeFromQueue(State element) {
+		this.queue.remove(element);
 	}
 
 }

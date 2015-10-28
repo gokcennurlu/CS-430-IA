@@ -20,17 +20,7 @@ import logist.topology.Topology.City;
 @SuppressWarnings("unused")
 public class Deliberative implements DeliberativeBehavior {
 
-	public static int getHashInitialMapSize(int n) {
-		if(n < 6)
-			return 16;
-		//an observation. 6 sample generates  => ~1800 states. 7=>~6.000
-		//8 => ~20.000, 9 => ~60.000, 10 => 210.000, 11 => 660.000 etc.
-		//this fits well..
-		return (int) (1800*Math.pow(3,n-6));
-	}
-
 	enum Algorithm { BFS, ASTAR, DIJKSTRA }
-	private HashMap<State,State> states;
 	
 	/* Environment */
 	Topology topology;
@@ -64,40 +54,9 @@ public class Deliberative implements DeliberativeBehavior {
 		Plan plan;
 
 		// Build State graph
-		states = new HashMap<State, State>(getHashInitialMapSize(tasks.size()));
 		System.out.println(tasks.size());
-		State startState = new State(new HashSet<Task>(), tasks.clone(), vehicle.getCurrentCity(), 0, 0, states);
-		startState.LEVEL = 1;
-		startState.g = 0;
-		//State goalState = new State(new HashSet<Task>(), new HashSet<Task>(), null, 99, states);
 		
-		states.put(startState, startState);
-		Queue<State> state_queue = new LinkedList<State>();
-		state_queue.add(startState);
-		while(!state_queue.isEmpty())
-		{
-			State currentState = state_queue.poll();
-			LinkedList<State> generated = currentState.buildChildren(vehicle);
-			state_queue.addAll(generated);
-
-			/*System.out.println("CURRENT STATE: " + currentState.toString());
-			System.out.println("GENERATED;");
-			for(State s: generated)
-				System.out.println("\t" + s.toString());
-			*/
-		}
-
-		System.out.println("Total number of states: " + states.size());
-
-		/*Collections.sort(states, new Comparator<State>() {
-			public int compare(State one, State other) {
-				return one.LEVEL - other.LEVEL;
-			}
-		});
-		*/
-		/*for(State s: states.values()){
-			System.out.println(s);
-		}*/
+		State startState = new State(new HashSet<Task>(), tasks.clone(), vehicle.getCurrentCity(), null);
 
 		// Compute the plan with the selected algorithm.
 		switch (algorithm) {
@@ -142,8 +101,6 @@ public class Deliberative implements DeliberativeBehavior {
 		}
 		return plan;
 	}
-	
-	
 	
 	private Plan AStar(Vehicle vehicle, TaskSet tasks) {
 		return new Plan(vehicle.getCurrentCity());
