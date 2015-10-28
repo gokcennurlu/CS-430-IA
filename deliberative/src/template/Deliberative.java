@@ -29,7 +29,7 @@ public class Deliberative implements DeliberativeBehavior {
 		return (int) (1800*Math.pow(3,n-6));
 	}
 
-	enum Algorithm { BFS, ASTAR }
+	enum Algorithm { BFS, ASTAR, DIJKSTRA }
 	private HashMap<State,State> states;
 	
 	/* Environment */
@@ -66,8 +66,9 @@ public class Deliberative implements DeliberativeBehavior {
 		// Build State graph
 		states = new HashMap<State, State>(getHashInitialMapSize(tasks.size()));
 		System.out.println(tasks.size());
-		State startState = new State(new HashSet<Task>(), tasks.clone(), vehicle.getCurrentCity(),0, states);
+		State startState = new State(new HashSet<Task>(), tasks.clone(), vehicle.getCurrentCity(), 0, 0, states);
 		startState.LEVEL = 1;
+		startState.g = 0;
 		//State goalState = new State(new HashSet<Task>(), new HashSet<Task>(), null, 99, states);
 		
 		states.put(startState, startState);
@@ -108,6 +109,10 @@ public class Deliberative implements DeliberativeBehavior {
 			// ...
 			BFS bfs = new BFS(vehicle, tasks, startState);
 			plan = bfs.search();
+			break;
+		case DIJKSTRA:
+			Dijkstra dijkstra = new Dijkstra(vehicle, tasks, startState);
+			plan = dijkstra.search();
 			break;
 		default:
 			throw new AssertionError("Should not happen.");

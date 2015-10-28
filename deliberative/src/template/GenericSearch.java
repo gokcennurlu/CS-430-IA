@@ -26,11 +26,11 @@ public abstract class GenericSearch {
 	}
 
 	public Plan search () {
-		this.queue.add(startState);	
+		this.addElement(startState);	
 		State solution = null;
 		int count = 0;
 		while (!this.queue.isEmpty()){
-			State head = this.queue.poll();
+			State head = this.getNextElement();
 			//System.out.println("vis:" + head.visited);
 			head.visited = true;
 			//System.out.println("Now at " + head + " HASH: " + head.hashCode() + ". head: " + head.ancestorState);
@@ -41,7 +41,7 @@ public abstract class GenericSearch {
 						solution = child;
 						break;
 					}
-					this.queue.add(child);
+					this.addElement(child);
 					child.inQueue = true;
 				}
 			}
@@ -51,6 +51,10 @@ public abstract class GenericSearch {
 		this.queue.clear();
 		return generatePlan(vehicle, solution, tasks);
 	}
+	
+	protected abstract State getNextElement();
+	
+	protected abstract void addElement(State element);
 	
 	private Plan generatePlan(Vehicle vehicle, State endState, TaskSet tasks){
 		State current = endState;
