@@ -9,8 +9,8 @@ import logist.task.TaskSet;
 
 public class BFS extends GenericSearch {
 	
-	public BFS(Vehicle vehicle, TaskSet tasks, State startState) {
-		super(vehicle, tasks, startState);
+	public BFS(Vehicle vehicle, State startState) {
+		super(vehicle, startState);
 		this.queue = new PriorityQueue<State>(10, new Comparator<State>() {
 			@Override
 			public int compare(State o1, State o2) {
