@@ -32,50 +32,35 @@ public abstract class GenericSearch {
 	}
 	
 	public Plan search () {
-		this.addToQueue(startState);	
-		State solution = null;
+		this.queue.add(startState);	
+		State head = startState;
 		
-		while (!this.queue.isEmpty()){
-			State head = this.getNextFromQueue();
-			
-			if(head.isFinalState()) {
-				System.out.println("Number of states searched: " + states.size());
-				this.queue.clear();
-				return generatePlan(vehicle, head);
-			}
-//			System.out.print(head.g);
-//			System.out.print(" " + head.currentTasks.size());
-//			System.out.println(" " + head.remainingTasks.size());
-			//System.out.println("vis:" + head.visited);
+		while (!head.isFinalState()){
+			head = this.queue.poll();
 			head.visited = true;
-			//System.out.println("Now at " + head + " HASH: " + head.hashCode() + ". head: " + head.ancestorState);
-			for(State child: head.getChildren(this.vehicle)){
-				
 
-				
+			for(State child: head.getChildren(this.vehicle)){
 				if(child.visited) continue;
 				
 				State alreadyAddedState = getAlreadyCreatedState(child);
 				if (alreadyAddedState == null) {
 					this.states.put(child, child);
-					this.addToQueue(child);
+					this.queue.add(child);
 				} else {
 					// If the element is in the queue, but there is a shorter path there, update queue
 					if (this.queue.comparator().compare(child, alreadyAddedState) < 0) {
-						this.removeFromQueue(alreadyAddedState);
-						this.addToQueue(child);
+						this.queue.remove(alreadyAddedState);
+						this.queue.add(child);
 					}
 					
 				}
 			}
 		}
+		
+		System.out.println("Number of states searched: " + states.size());
 		this.queue.clear();
-		return generatePlan(vehicle, solution);
+		return generatePlan(vehicle, head);
 	}
-	
-	protected abstract State getNextFromQueue();
-	protected abstract void addToQueue(State element);
-	protected abstract void removeFromQueue(State element);
 	
 	public State getAlreadyCreatedState(State state){
 		if(states.containsKey(state))
