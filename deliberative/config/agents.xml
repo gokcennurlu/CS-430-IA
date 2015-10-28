@@ -22,4 +22,10 @@
 		<set algorithm="DIJKSTRA"/>
 	</agent>
 	
+	<agent name="deliberative-astar">
+		<set class-path="bin/"/>
+		<set class-name="template.Deliberative"/>
+		<set algorithm="ASTAR"/>
+	</agent>
+	
 </agents>
