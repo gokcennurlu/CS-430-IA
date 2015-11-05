@@ -5,6 +5,7 @@ import java.util.*;
 import logist.plan.Action;
 import logist.simulation.Vehicle;
 import logist.task.Task;
+import logist.topology.Topology;
 import logist.topology.Topology.City;
 
 import javax.sound.midi.SysexMessage;
@@ -15,43 +16,41 @@ public class State {
 	public City currentCity;
 
 	public boolean visited;
-	public boolean inQueue = false;
-	public State ancestorState;
+	public State ancestor;
+	private Topology topology;
+	
+	public double g;
+	public double h;
 
-	public Set<State> children;
+	public HashSet<State> children;
 	public int LEVEL;
-	private HashMap<State,State> allStates;
-	public State(Set<Task> currentTasks, Set<Task> remainingTasks,City currentCity, int level, HashMap<State,State> allStates) {
+
+	public State(Set<Task> currentTasks, Set<Task> remainingTasks,City currentCity, State ancestor, Topology topology) {
 		this.currentTasks = currentTasks;
 		this.remainingTasks = remainingTasks;
 		this.currentCity = currentCity;
 		this.children = new HashSet<State>();
-		this.LEVEL = level;
-		this.allStates = allStates;
-	}
-
-	public State alreadyAdded(Set<Task> currentTasks, Set<Task> remainingTasks,City currentCity){
-		State dummy = new State(currentTasks, remainingTasks,currentCity, -1, null);
-		if(allStates.containsKey(dummy))
-			return allStates.get(dummy);
-		return null;
-
-		/*if(!this.allStates.contains(dummy))
-			return null;
-		for(State s: this.allStates){
-			if(s.currentCity.equals(currentCity) && s.currentTasks.equals(currentTasks) && s.remainingTasks.equals(remainingTasks))
-				return s;
+		this.ancestor = ancestor;
+		this.topology = topology;
+		
+		if (ancestor == null) {
+			this.LEVEL = 0;
+			this.g = 0;
+		} else {
+			this.LEVEL = ancestor.LEVEL + 1;
+			this.g = ancestor.g + ancestor.currentCity.distanceTo(this.currentCity);
 		}
-		return null;
-		*/
+
+		this.h = h();
+		
 	}
 
 	public boolean isFinalState(){
 		return (this.currentTasks.isEmpty() && this.remainingTasks.isEmpty());
 	}
 
-	public LinkedList<State> buildChildren(Vehicle vehicle) {
-		LinkedList<State> newChildren = new LinkedList<State>();
+	public HashSet<State> getChildren(Vehicle vehicle) {
+		HashSet<State> newChildren = new HashSet<State>();
 		int totalWeightWeHave = 0;
 
 		//We can drop current tasks if any.
@@ -73,19 +72,8 @@ public class State {
 					count+=1;
 				}
 			}
-			//System.out.println("Reduced " + count);
 
-			State s = alreadyAdded(tasks, this.remainingTasks, task.deliveryCity);
-			if(s == null){
-				State candidate = new State(tasks, this.remainingTasks, task.deliveryCity, this.LEVEL+1, allStates);
-				this.children.add(candidate);
-				newChildren.add(candidate);
-				allStates.put(candidate,candidate);
-			}
-			else{
-				//System.out.println("Avoided!");
-				this.children.add(s);
-			}
+			this.children.add(new State(tasks, this.remainingTasks, task.deliveryCity, this, topology));
 
 			//we also sum up the total weight we have now.
 			totalWeightWeHave += task.weight;
@@ -106,39 +94,21 @@ public class State {
 				But, if there other packages (in currentTasks) that we can drop at that same city, why not drop them all
 				while picking this new task?
 				*/
-				int count = 0;
 				for (Iterator<Task> i = newCurrenttasks.iterator(); i.hasNext();) {
 					Task t = i.next();
 					if (t.deliveryCity == task.pickupCity && t!=task) {
 						i.remove();
-						count+=1;
 					}
 				}
-				//System.out.println("Reduced " + count);
 
-				State s = alreadyAdded(newCurrenttasks, newRemainingTasks, task.pickupCity);
-				if (s == null) {
-					State candidate = new State(newCurrenttasks, newRemainingTasks, task.pickupCity, this.LEVEL + 1, allStates);
-					this.children.add(candidate);
-					newChildren.add(candidate);
-					allStates.put(candidate,candidate);
-				} else {
-					//System.out.println("Avoided!");
-					this.children.add(s);
-				}
+				State candidate = new State(newCurrenttasks, newRemainingTasks, task.pickupCity, this, topology);
+				this.children.add(candidate);
 			}
 			else{
 				System.out.println("Due to Vehicle Capacity, impossible to pick new task.");
 			}
 		}
-		return newChildren;
-	}
-	
-	public void prettyPrint() {
-		/*System.out.println(this.currentTasks.toString() + " : " + this.remainingTasks.toString());
-		for(State child : this.children) {
-			System.out.print(" | " + child.toString());
-		}*/
+		return this.children;
 	}
 
 	@Override
@@ -152,7 +122,6 @@ public class State {
 		for(Task s : this.remainingTasks) {
 			str += s.id + ",";
 		}
-		//str+= "\t\tfrom: " + this.ancestorState;
 		return str;
 	}
 
@@ -172,7 +141,48 @@ public class State {
 		final State other = (State) obj;
 		return other.currentTasks.equals(this.currentTasks) && other.remainingTasks.equals(this.remainingTasks) && other.currentCity.equals(this.currentCity);
 	}
-
-
-
+	
+	public double f() {
+		return this.g + this.h;
+	}
+	
+	private double h() {
+		
+		// Generate all the cities that need to be visited
+		HashSet<City> needToBeVisited = new HashSet<City>();
+		for (Task task : this.remainingTasks) {
+			needToBeVisited.add(task.deliveryCity);
+			needToBeVisited.add(task.pickupCity);
+		}
+		for (Task task : this.currentTasks) {
+			needToBeVisited.add(task.deliveryCity);
+		}
+		
+		
+		HashSet<City> alreadyConnected = new HashSet<City>();
+		alreadyConnected.add(this.currentCity);
+		needToBeVisited.remove(this.currentCity);
+		
+		double minTotalDistance = 0;
+		
+		while (alreadyConnected.size() < new Integer(needToBeVisited.size())) {
+		
+			double minDistance = Double.MAX_VALUE;
+			City nextToBeVisited = null;
+			for (City from : alreadyConnected) {
+				for (City to: needToBeVisited) {
+					double dist = from.distanceTo(to);
+					if (dist < minDistance) {
+						minDistance = dist;
+						nextToBeVisited = to;
+					}
+				}
+			}
+			minTotalDistance += minDistance;
+			minDistance = Double.MAX_VALUE;
+			alreadyConnected.add(nextToBeVisited);
+			needToBeVisited.remove(nextToBeVisited);
+		}
+		return minTotalDistance;
+	}
 }

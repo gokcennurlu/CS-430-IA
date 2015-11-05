@@ -20,17 +20,7 @@ import logist.topology.Topology.City;
 @SuppressWarnings("unused")
 public class Deliberative implements DeliberativeBehavior {
 
-	public static int getHashInitialMapSize(int n) {
-		if(n < 6)
-			return 16;
-		//an observation. 6 sample generates  => ~1800 states. 7=>~6.000
-		//8 => ~20.000, 9 => ~60.000, 10 => 210.000, 11 => 660.000 etc.
-		//this fits well..
-		return (int) (1800*Math.pow(3,n-6));
-	}
-
-	enum Algorithm { BFS, ASTAR }
-	private HashMap<State,State> states;
+	enum Algorithm { BFS, ASTAR, DIJKSTRA }
 	
 	/* Environment */
 	Topology topology;
@@ -42,6 +32,7 @@ public class Deliberative implements DeliberativeBehavior {
 
 	/* the planning class */
 	Algorithm algorithm;
+	TaskSet carried;
 	
 	@Override
 	public void setup(Topology topology, TaskDistribution td, Agent agent) {
@@ -62,52 +53,35 @@ public class Deliberative implements DeliberativeBehavior {
 	@Override
 	public Plan plan(Vehicle vehicle, TaskSet tasks) {
 		Plan plan;
-
-		// Build State graph
-		states = new HashMap<State, State>(getHashInitialMapSize(tasks.size()));
-		System.out.println(tasks.size());
-		State startState = new State(new HashSet<Task>(), tasks.clone(), vehicle.getCurrentCity(),0, states);
-		startState.LEVEL = 1;
-		//State goalState = new State(new HashSet<Task>(), new HashSet<Task>(), null, 99, states);
 		
-		states.put(startState, startState);
-		Queue<State> state_queue = new LinkedList<State>();
-		state_queue.add(startState);
-		while(!state_queue.isEmpty())
-		{
-			State currentState = state_queue.poll();
-			LinkedList<State> generated = currentState.buildChildren(vehicle);
-			state_queue.addAll(generated);
-
-			/*System.out.println("CURRENT STATE: " + currentState.toString());
-			System.out.println("GENERATED;");
-			for(State s: generated)
-				System.out.println("\t" + s.toString());
-			*/
+		HashSet<Task> agentTasks;
+		
+		if (carried != null) {
+			agentTasks = new HashSet<Task>(carried);
+		} else {
+			agentTasks = new HashSet<Task>();
 		}
 
-		System.out.println("Total number of states: " + states.size());
+		// Build State graph
+		System.out.println(tasks.size());
+		
+		State startState = new State(agentTasks, tasks.clone(), vehicle.getCurrentCity(), null, topology);
 
-		/*Collections.sort(states, new Comparator<State>() {
-			public int compare(State one, State other) {
-				return one.LEVEL - other.LEVEL;
-			}
-		});
-		*/
-		/*for(State s: states.values()){
-			System.out.println(s);
-		}*/
 
 		// Compute the plan with the selected algorithm.
 		switch (algorithm) {
 		case ASTAR:
-			// ...
-			plan = naivePlan(vehicle, tasks);
+			AStar astar = new AStar(vehicle, startState);
+			plan = astar.search();
 			break;
 		case BFS:
 			// ...
-			BFS bfs = new BFS(vehicle, tasks, startState);
+			BFS bfs = new BFS(vehicle, startState);
 			plan = bfs.search();
+			break;
+		case DIJKSTRA:
+			Dijkstra dijkstra = new Dijkstra(vehicle, startState);
+			plan = dijkstra.search();
 			break;
 		default:
 			throw new AssertionError("Should not happen.");
@@ -120,25 +94,19 @@ public class Deliberative implements DeliberativeBehavior {
 		Plan plan = new Plan(current);
 
 		for (Task task : tasks) {
-			// move: current city => pickup location
 			for (City city : current.pathTo(task.pickupCity))
 				plan.appendMove(city);
 
 			plan.appendPickup(task);
 
-			// move: pickup location => delivery location
 			for (City city : task.path())
 				plan.appendMove(city);
 
 			plan.appendDelivery(task);
-
-			// set current city
 			current = task.deliveryCity;
 		}
 		return plan;
 	}
-	
-	
 	
 	private Plan AStar(Vehicle vehicle, TaskSet tasks) {
 		return new Plan(vehicle.getCurrentCity());
@@ -147,11 +115,6 @@ public class Deliberative implements DeliberativeBehavior {
 
 	@Override
 	public void planCancelled(TaskSet carriedTasks) {
-		
-		if (!carriedTasks.isEmpty()) {
-			// This cannot happen for this simple agent, but typically
-			// you will need to consider the carriedTasks when the next
-			// plan is computed.
-		}
+		this.carried = carriedTasks;
 	}
 }

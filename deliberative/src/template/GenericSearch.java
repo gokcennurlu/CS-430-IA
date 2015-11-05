@@ -1,8 +1,10 @@
 package template;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Set;
 
@@ -13,67 +15,79 @@ import logist.task.TaskSet;
 import logist.topology.Topology.City;
 
 public abstract class GenericSearch {
-	protected Queue<State> queue;
+	protected PriorityQueue<State> queue;
 	private Vehicle vehicle;
-	private TaskSet tasks;
 	private State startState;
+	private HashMap<State,State> states;
 
-	public GenericSearch(Vehicle vehicle, TaskSet tasks, State startState) {
+	public GenericSearch(Vehicle vehicle, State startState) {
 		super();
 		this.vehicle = vehicle;
-		this.tasks = tasks;
 		this.startState = startState;
-	}
-
-	public Plan search () {
-		this.queue.add(startState);	
-		State solution = null;
-		int count = 0;
-		while (!this.queue.isEmpty()){
-			State head = this.queue.poll();
-			//System.out.println("vis:" + head.visited);
-			head.visited = true;
-			//System.out.println("Now at " + head + " HASH: " + head.hashCode() + ". head: " + head.ancestorState);
-			for(State child: head.children){
-				if(!child.visited && !child.inQueue){
-					child.ancestorState = head;
-					if(child.isFinalState()) {
-						solution = child;
-						break;
-					}
-					this.queue.add(child);
-					child.inQueue = true;
-				}
-			}
-			if(solution != null)
-				break;
-		}
-		this.queue.clear();
-		return generatePlan(vehicle, solution, tasks);
+		this.states = new HashMap<State, State>();
+		states.put(startState, startState);
 	}
 	
-	private Plan generatePlan(Vehicle vehicle, State endState, TaskSet tasks){
+	public Plan search () {
+		this.queue.add(startState);	
+		State head = startState;
+		
+		while (!head.isFinalState()){
+			head = this.queue.poll();
+			head.visited = true;
+
+			for(State child: head.getChildren(this.vehicle)){
+				if(child.visited) continue;
+				
+				State alreadyAddedState = getAlreadyCreatedState(child);
+				if (alreadyAddedState == null) {
+					this.states.put(child, child);
+					this.queue.add(child);
+				} else {
+					// If the element is in the queue, but there is a shorter path there, update queue
+					if (this.queue.comparator().compare(child, alreadyAddedState) < 0) {
+						this.queue.remove(alreadyAddedState);
+						this.queue.add(child);
+					}
+					
+				}
+			}
+		}
+		
+		System.out.println("Number of states searched: " + states.size());
+		this.queue.clear();
+		return generatePlan(vehicle, head);
+	}
+	
+	public State getAlreadyCreatedState(State state){
+		if(states.containsKey(state))
+			return states.get(state);
+		return null;
+	}
+	
+	private Plan generatePlan(Vehicle vehicle, State endState){
+		//Generate plan from the solution to the start
 		State current = endState;
 		List<State> stateList = new LinkedList<State>();
-		List<Task> finalTasks = new LinkedList<Task>();
 
 		City currentCity = vehicle.getCurrentCity();
 		Plan plan = new Plan(currentCity);
 
+		//Create a list of all states in plan
 		while(current != null) {
 			stateList.add(0,current);
-			current = current.ancestorState;
+			current = current.ancestor;
 		}
+
 		for(int i = 0; i < stateList.size() - 1; i++){
 			State cur = stateList.get(i);
-			System.out.println("\t" + cur.toString());
+			//Find change in current task in this state and the next state
 			Set<Task> droppedTasks = new HashSet<Task>(cur.currentTasks);
 			droppedTasks.removeAll(stateList.get(i+1).currentTasks);
-			System.out.println("\n\n\t\tDropped: " + droppedTasks);
+			
+			//Find change in remaining tasks in this state and next state
 			Set<Task> pickedTasks = new HashSet<Task>(cur.remainingTasks);
 			pickedTasks.removeAll(stateList.get(i+1).remainingTasks);
-			System.out.println("\t\tPicked: " + pickedTasks);
-			System.out.println("\t\tNow at: " + stateList.get(i+1).currentCity);
 
 			City target = null;
 			if(!pickedTasks.isEmpty())
