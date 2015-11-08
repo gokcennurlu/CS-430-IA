@@ -102,7 +102,7 @@ public class Centralized implements CentralizedBehavior {
             PriorityQueue<HashMap<Vehicle, LinkedList<TaskAction>>> neighbours = this.getNeighbors(vehicleActions, vehicles);
             System.out.println(i + ". iteration:" + neighbours.size());
             if (new Random().nextDouble() < P && !neighbours.isEmpty()) {
-                oldVehicleActions = vehicleActions;
+                //oldVehicleActions = vehicleActions;
                 vehicleActions = neighbours.poll();
                 System.out.println("\t\tCost: " + totalCost(vehicleActions));
                 prettyPrint(vehicleActions);
@@ -111,14 +111,6 @@ public class Centralized implements CentralizedBehavior {
                 //vehicleActions = oldVehicleActions; //backtracking?
             }
         }
-
-        /*
-        for (HashMap<Vehicle, LinkedList<TaskAction>> neighbor : neighbors) {
-        	prettyPrint(neighbor);
-        	System.out.println("Cost: " + totalCost(neighbor));
-        	System.out.println("");
-        }
-        */
 
 
 //		System.out.println("Agent " + agent.id() + " has tasks " + tasks);
@@ -202,6 +194,7 @@ public class Centralized implements CentralizedBehavior {
         double currentListCost = vehicleCost(vehicle, actions);
         while (true) {
             // TODO: We might want to change number of tries according to size of 'actions' of the vehicle.
+            // for now I made it like below:
             if (tries++ > actions.size()*2) {
                 //System.out.println("getShuffledActions: Max tries exceeded. Size: " + actions.size());
                 return null;
@@ -244,6 +237,8 @@ public class Centralized implements CentralizedBehavior {
             HashMap<Vehicle, LinkedList<TaskAction>> candidate = new HashMap<Vehicle, LinkedList<TaskAction>>();
 
             //We roll a dice here:
+            //TODO we might want to remove this dice rolling and request fixed number neightbors of from each method
+            //and we might want to prepare different methods like 2-opt,3-opt I think.
             if (new Random().nextDouble() < 0.2) {
                 //We pick a vehicle with non-empty task list and swap its tasks
                 int shuffleTries = 0;
@@ -273,6 +268,9 @@ public class Centralized implements CentralizedBehavior {
                 //We pick a vehicle (first vehicle) with non-empty task list.
                 //Then pick a random taskaction and remove it and its sister.
                 //and put those into another vehicle(different than first one)
+
+                // I TRIED inserting in front, but it USUALLY fails since adding something results with much worse cost
+                // This might be OK for "carry one task at a time" but not in this case.
                 int triesOuter = 0;
                 boolean keepTrying = true;
                 while (keepTrying && triesOuter++ < MAX_NUMBER_OF_SWAP_BETWEEN_VEHICLES_TRIES_OUTER) {
@@ -340,10 +338,6 @@ public class Centralized implements CentralizedBehavior {
                         }
                     }
                 }
-
-                // TRIED Checking the cost in this one, but it USUALLY fails since adding something in front sucks.
-                // This might be OK for "carry one task at a time" but not in this case.
-                // TODO: We might need to add it smartly.
 
             }
         }
