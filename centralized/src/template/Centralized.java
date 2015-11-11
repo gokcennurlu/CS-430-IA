@@ -31,9 +31,9 @@ public class Centralized implements CentralizedBehavior {
     private long timeout_setup;
     private long timeout_plan;
 
-    private final double P = 0.3;
+    private final double P = 0.5;
     private final long NUMBER_OF_ITERATIONS = 10000;
-    private final long NUMBER_OF_NEIGHBOURS_GENERATED = 100;
+    private final long NUMBER_OF_NEIGHBOURS_GENERATED = 150;
 
     private HashMap<Vehicle, LinkedList<TaskAction>> vehicleActions;
 
@@ -71,20 +71,27 @@ public class Centralized implements CentralizedBehavior {
 
         //System.out.println(this.totalCost(vehicleActions));
 
+        double p = P;
+
         for (int i = 0; i < NUMBER_OF_ITERATIONS; i++) {
+            p -= P/NUMBER_OF_ITERATIONS;
 
             PriorityQueue<HashMap<Vehicle, LinkedList<TaskAction>>> neighbours = this.getNeighbors(vehicleActions, vehicles);
             System.out.println("\n" + i + ". iteration");
 
             double oldCost = totalCost(vehicleActions);
-
-
-            HashMap<Vehicle, LinkedList<TaskAction>> candidate = neighbours.poll();
-
-            double newCost = totalCost(candidate);
-
-            if (new Random().nextDouble() < P || newCost < oldCost) {
-                vehicleActions = candidate;
+            
+            if (new Random().nextDouble() > p) {
+                vehicleActions = neighbours.poll();
+                
+            } else {
+                ArrayList<HashMap<Vehicle, LinkedList<TaskAction>>> neighbourList = new ArrayList<HashMap<Vehicle, LinkedList<TaskAction>>>();
+                
+                for (HashMap<Vehicle, LinkedList<TaskAction>> neighbour : neighbours) {
+                    neighbourList.add(neighbour);
+                }
+                
+                vehicleActions = neighbourList.get(new Random().nextInt(neighbourList.size() / 5)); 
             }
 
             if (totalCost(vehicleActions) < currentBestScore) {
