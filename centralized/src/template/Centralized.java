@@ -33,13 +33,13 @@ public class Centralized implements CentralizedBehavior {
 
     private final double P = 0.3;
     private final long NUMBER_OF_ITERATIONS = 10000;
-    private final long NUMBER_OF_NEIGHBOURS_GENERATED = 150;
+    private final long NUMBER_OF_NEIGHBOURS_GENERATED = 100;
 
     private HashMap<Vehicle, LinkedList<TaskAction>> vehicleActions;
 
     @Override
     public void setup(Topology topology, TaskDistribution distribution,
-                      Agent agent) {
+            Agent agent) {
 
         // this code is used to get the timeouts
         LogistSettings ls = null;
@@ -63,60 +63,61 @@ public class Centralized implements CentralizedBehavior {
     public List<Plan> plan(List<Vehicle> vehicles, TaskSet tasks) {
 
         long time_start = System.currentTimeMillis();
-        
+
         initializePlan(vehicles, tasks);
-        
+
         HashMap<Vehicle, LinkedList<TaskAction>> currentBest = null;
         double currentBestScore = Double.MAX_VALUE;
-        
+
         //System.out.println(this.totalCost(vehicleActions));
 
         for (int i = 0; i < NUMBER_OF_ITERATIONS; i++) {
-        	
+
             PriorityQueue<HashMap<Vehicle, LinkedList<TaskAction>>> neighbours = this.getNeighbors(vehicleActions, vehicles);
             System.out.println("\n" + i + ". iteration");
-            
+
             double oldCost = totalCost(vehicleActions);
-            
+
+
             HashMap<Vehicle, LinkedList<TaskAction>> candidate = neighbours.poll();
-            
+
             double newCost = totalCost(candidate);
-            
+
             if (new Random().nextDouble() < P || newCost < oldCost) {
-        		vehicleActions = candidate;
+                vehicleActions = candidate;
             }
-            
+
             if (totalCost(vehicleActions) < currentBestScore) {
-            	currentBest = vehicleActions;
-            	currentBestScore = totalCost(vehicleActions);
+                currentBest = vehicleActions;
+                currentBestScore = totalCost(vehicleActions);
             }
-            
+
             System.out.println("Cost: " + totalCost(vehicleActions));
             prettyPrint(vehicleActions);
         }
-        
+
         System.out.println("\nBest:");
         System.out.println(currentBestScore);
         prettyPrint(currentBest);
 
 
-//		System.out.println("Agent " + agent.id() + " has tasks " + tasks);
-//        Plan planVehicle1 = naivePlan(vehicles.get(0), tasks);
+        //		System.out.println("Agent " + agent.id() + " has tasks " + tasks);
+        //        Plan planVehicle1 = naivePlan(vehicles.get(0), tasks);
 
         List<Plan> plans = new ArrayList<Plan>();
-//        plans.add(planVehicle1);
-        
+        //        plans.add(planVehicle1);
+
         for (Vehicle v : vehicles) {
-        	plans.add(getVehiclePlan(v));
+            plans.add(getVehiclePlan(v));
         }
-        
+
         long time_end = System.currentTimeMillis();
         long duration = time_end - time_start;
         System.out.println("The plan was generated in " + duration + " milliseconds.");
 
         return plans;
     }
-    
+
     private void initializePlan(List<Vehicle> vehicles, TaskSet tasks) {
 
         Vehicle first = vehicles.get(0);
@@ -128,34 +129,71 @@ public class Centralized implements CentralizedBehavior {
         }
 
         for (Task task : tasks) {
-            vehicleActions.get(first).add(new TaskAction(task, PickupDelivery.PICKUP));
-            vehicleActions.get(first).add(new TaskAction(task, PickupDelivery.DELIVERY));
+            addTask(first, task);
         }
     }
-    
+
+    private void initializePlanEven(List<Vehicle> vehicles, TaskSet tasks) {
+
+        vehicleActions = new HashMap<Vehicle, LinkedList<TaskAction>>();
+
+        for (Vehicle v : vehicles) {
+            vehicleActions.put(v, new LinkedList<TaskAction>());
+        }
+
+        int i = 0;
+        for (Task task : tasks) {
+            Vehicle v = vehicles.get(i % vehicles.size());
+            addTask(v, task);
+            i++;
+        }
+    }
+
+    private void initializePlanRandom(List<Vehicle> vehicles, TaskSet tasks) {
+        vehicleActions = new HashMap<Vehicle, LinkedList<TaskAction>>();
+
+        for (Vehicle v : vehicles) {
+            vehicleActions.put(v, new LinkedList<TaskAction>());
+        }
+
+        ArrayList<Task> taskList = new ArrayList<Task>(tasks);
+        Collections.shuffle(taskList);
+
+        for (Task task : taskList) {
+            Vehicle vehicle = vehicles.get(new Random().nextInt(vehicles.size()));
+            addTask(vehicle, task);
+        }
+
+    }
+
+    private void addTask(Vehicle vehicle, Task task) {
+        vehicleActions.get(vehicle).add(new TaskAction(task, PickupDelivery.PICKUP));
+        vehicleActions.get(vehicle).add(new TaskAction(task, PickupDelivery.DELIVERY));
+    }
+
     private Plan getVehiclePlan(Vehicle vehicle) {
-    	Plan plan = new Plan(vehicle.getCurrentCity());
-    	City current = vehicle.getCurrentCity();
-    	
-    	for (TaskAction ta : vehicleActions.get(vehicle)) {
-    		if (ta.getType() == PickupDelivery.PICKUP) {
-    			
-    			for (City city : current.pathTo(ta.getTask().pickupCity)) {
-    				plan.appendMove(city);	
-    			}
-    			plan.appendPickup(ta.getTask());
-    			current = ta.getTask().pickupCity;
-    			
-    		} else {
-    			for (City city : current.pathTo(ta.getTask().deliveryCity)) {
-    				plan.appendMove(city);	
-    			}
-    			plan.appendDelivery(ta.getTask());
-    			current = ta.getTask().deliveryCity;
-    		}
-    	}
-    	
-    	return plan;
+        Plan plan = new Plan(vehicle.getCurrentCity());
+        City current = vehicle.getCurrentCity();
+
+        for (TaskAction ta : vehicleActions.get(vehicle)) {
+            if (ta.getType() == PickupDelivery.PICKUP) {
+
+                for (City city : current.pathTo(ta.getTask().pickupCity)) {
+                    plan.appendMove(city);	
+                }
+                plan.appendPickup(ta.getTask());
+                current = ta.getTask().pickupCity;
+
+            } else {
+                for (City city : current.pathTo(ta.getTask().deliveryCity)) {
+                    plan.appendMove(city);	
+                }
+                plan.appendDelivery(ta.getTask());
+                current = ta.getTask().deliveryCity;
+            }
+        }
+
+        return plan;
     }
 
     private <K, V> void prettyPrint(HashMap<K, V> actionMap) {
@@ -216,16 +254,16 @@ public class Centralized implements CentralizedBehavior {
     returns Null if no possible improvement found after MAX_NUMBER_OF_ONE_VEHICLE_SWAP_TRIES tries.
      */
     private LinkedList<TaskAction> getShuffledActions(Vehicle vehicle, LinkedList<TaskAction> actions) {
-//    	System.out.println("getShuffledActions");
-//    	System.out.println(actions.size());
-    	
-    	//avoding infinite loop in cases like 'actions = [p1,d1]'
+        //    	System.out.println("getShuffledActions");
+        //    	System.out.println(actions.size());
+
+        //avoding infinite loop in cases like 'actions = [p1,d1]'
         if (actions.size() <= 2) {
             return null;
         }
-        
+
         LinkedList<TaskAction> actions_copy = (LinkedList<TaskAction>) actions.clone();
-        
+
         int tries = 0;
         while (true) {
 
@@ -255,25 +293,25 @@ public class Centralized implements CentralizedBehavior {
     }
 
     private PriorityQueue<HashMap<Vehicle, LinkedList<TaskAction>>> getNeighbors(HashMap<Vehicle, LinkedList<TaskAction>> vehicleActions, List<Vehicle> vehicles) {
-        
-    	PriorityQueue<HashMap<Vehicle, LinkedList<TaskAction>>> candidates = new PriorityQueue<HashMap<Vehicle, LinkedList<TaskAction>>>(new Comparator<HashMap<Vehicle, LinkedList<TaskAction>>>() {
+
+        PriorityQueue<HashMap<Vehicle, LinkedList<TaskAction>>> candidates = new PriorityQueue<HashMap<Vehicle, LinkedList<TaskAction>>>(new Comparator<HashMap<Vehicle, LinkedList<TaskAction>>>() {
             @Override
             public int compare(HashMap<Vehicle, LinkedList<TaskAction>> o1, HashMap<Vehicle, LinkedList<TaskAction>> o2) {
                 return Double.compare(totalCost(o1), totalCost(o2));
             }
         });
-    	
-//    	  Alternative method for creating neighbors of only one type
-//        if (new Random().nextDouble() < 0.5) {
-//        	for (int i = 0; i < NUMBER_OF_NEIGHBOURS_GENERATED; i++) {
-//        		candidates.add(getInternalSwapCandidate(vehicleActions, vehicles));
-//        	}
-//        } else {
-//        	for (int i = 0; i < NUMBER_OF_NEIGHBOURS_GENERATED; i++) {
-//        		candidates.add(getExternalSwapCandidate(vehicleActions, vehicles));
-//        	}
-//        }
-    	
+
+        //    	  Alternative method for creating neighbors of only one type
+        //        if (new Random().nextDouble() < 0.5) {
+        //        	for (int i = 0; i < NUMBER_OF_NEIGHBOURS_GENERATED; i++) {
+        //        		candidates.add(getInternalSwapCandidate(vehicleActions, vehicles));
+        //        	}
+        //        } else {
+        //        	for (int i = 0; i < NUMBER_OF_NEIGHBOURS_GENERATED; i++) {
+        //        		candidates.add(getExternalSwapCandidate(vehicleActions, vehicles));
+        //        	}
+        //        }
+
 
         while (candidates.size() < NUMBER_OF_NEIGHBOURS_GENERATED) {
 
@@ -282,99 +320,99 @@ public class Centralized implements CentralizedBehavior {
             //TODO we might want to remove this dice rolling and request fixed number neightbors of from each method
             //and we might want to prepare different methods like 2-opt,3-opt I think.
             if (new Random().nextDouble() < 0.01) {
-            	candidate = getInternalSwapCandidate(vehicleActions, vehicles);
+                candidate = getInternalSwapCandidate(vehicleActions, vehicles);
             } else {
-            	candidate = getExternalSwapCandidate(vehicleActions, vehicles);
+                candidate = getExternalSwapCandidate(vehicleActions, vehicles);
             }
             candidates.add(candidate);
         }
         return candidates;
     }
-    
-    
+
+
     private HashMap<Vehicle, LinkedList<TaskAction>> getInternalSwapCandidate(HashMap<Vehicle, LinkedList<TaskAction>> vehicleActions, List<Vehicle> vehicles) {
-    	//We pick a vehicle with non-empty task list and swap its tasks
-    	
-    	LinkedList<TaskAction> newActionsForVehicle = null;
-		HashMap<Vehicle, LinkedList<TaskAction>> candidate = (HashMap<Vehicle, LinkedList<TaskAction>>) vehicleActions.clone();
-		Vehicle vehicle = null;
-		
-    	while(newActionsForVehicle == null) {
+        //We pick a vehicle with non-empty task list and swap its tasks
+
+        LinkedList<TaskAction> newActionsForVehicle = null;
+        HashMap<Vehicle, LinkedList<TaskAction>> candidate = (HashMap<Vehicle, LinkedList<TaskAction>>) vehicleActions.clone();
+        Vehicle vehicle = null;
+
+        while(newActionsForVehicle == null) {
             vehicle = vehicles.get(new Random().nextInt(vehicles.size()));
             newActionsForVehicle = getShuffledActions(vehicle, candidate.get(vehicle));
-//            System.out.println("getInternalSwapCandidates");
-    	}
-        
+            //            System.out.println("getInternalSwapCandidates");
+        }
+
         candidate.put(vehicle, newActionsForVehicle);
-        
+
         return candidate;
-        
-//        int profit = (int) (vehicleCost(vehicle, vehicleActions.get(vehicle)) - vehicleCost(vehicle, newActionsForVehicle));
-//        System.out.println("\t\tSWAP on one vehicle\t\t\tProfit: " + profit);
+
+        //        int profit = (int) (vehicleCost(vehicle, vehicleActions.get(vehicle)) - vehicleCost(vehicle, newActionsForVehicle));
+        //        System.out.println("\t\tSWAP on one vehicle\t\t\tProfit: " + profit);
     }
-    
-    
+
+
     private HashMap<Vehicle, LinkedList<TaskAction>> getExternalSwapCandidate(HashMap<Vehicle, LinkedList<TaskAction>> vehicleActions, List<Vehicle> vehicles) {
-    	//We pick a vehicle (first vehicle) with non-empty task list.
+        //We pick a vehicle (first vehicle) with non-empty task list.
         //Then pick a random taskaction and remove it and its sister.
         //and put those into another vehicle(different than first one)
-    	
-    	boolean isValid = false;
-    	
-		while (!isValid) {
-//			System.out.println("getExternalSwapCandidate");
-	    	
-			HashMap<Vehicle, LinkedList<TaskAction>> candidate = (HashMap<Vehicle, LinkedList<TaskAction>>) vehicleActions.clone();
-	
-	        // I TRIED inserting in front, but it USUALLY fails since adding something results with much worse cost
-	        // This might be OK for "carry one task at a time" but not in this case.
-	            
-			Vehicle firstVehicle = null;
-		    while (firstVehicle == null || vehicleActions.get(firstVehicle).isEmpty()) {
-		        firstVehicle = vehicles.get(new Random().nextInt(vehicles.size()));
-		    }
-		
-		    Vehicle secondVehicle = null;
-		    while (secondVehicle == null || secondVehicle == firstVehicle) {
-		        secondVehicle = vehicles.get(new Random().nextInt(vehicles.size()));
-		    }
-		    
-		    LinkedList<TaskAction> firstVehicleActions = (LinkedList<TaskAction>) vehicleActions.get(firstVehicle).clone();
-		    LinkedList<TaskAction> secondVehicleActions = (LinkedList<TaskAction>) vehicleActions.get(secondVehicle).clone();
-		    
-		//    double initialCost = vehicleCost(firstVehicle, candidate.get(firstVehicle)) + vehicleCost(secondVehicle, candidate.get(secondVehicle));
-		
-		    //remove corresponding TaskActions from firstVehicle
-		    int i1 = new Random().nextInt(firstVehicleActions.size());
-		    Task taskToSeek = firstVehicleActions.get(i1).getTask();
-		    
-		    Iterator<TaskAction> it = firstVehicleActions.iterator();
-		    while (it.hasNext()) {
-		        if (it.next().getTask() == taskToSeek) {
-		            it.remove();
-		        }
-		    }
-		
-		    TaskAction pickupTask = new TaskAction(taskToSeek, PickupDelivery.PICKUP);
-		    TaskAction deliveryTask = new TaskAction(taskToSeek, PickupDelivery.DELIVERY);
-		
-		    
-		    //add them to secondVehicle. try to find insert positions so that cost of second vehicle is
-		    //less than 'secondVehicleCostTreshold'
-		
-	        int firstIndex = new Random().nextInt(secondVehicleActions.size() + 1); // +1 to add to end
-	        secondVehicleActions.add(firstIndex, pickupTask);
-	       
-	        int secondIndex = firstIndex + 1 + new Random().nextInt(secondVehicleActions.size() - firstIndex);
-	        secondVehicleActions.add(secondIndex, deliveryTask);
-	
-	        if (isValid(secondVehicleActions, secondVehicle)) {
-	        	candidate.put(firstVehicle, firstVehicleActions);
-	        	candidate.put(secondVehicle, secondVehicleActions);
-	            return candidate;
-	        }
-		}
-		return null;
+
+        boolean isValid = false;
+
+        while (!isValid) {
+            //			System.out.println("getExternalSwapCandidate");
+
+            HashMap<Vehicle, LinkedList<TaskAction>> candidate = (HashMap<Vehicle, LinkedList<TaskAction>>) vehicleActions.clone();
+
+            // I TRIED inserting in front, but it USUALLY fails since adding something results with much worse cost
+            // This might be OK for "carry one task at a time" but not in this case.
+
+            Vehicle firstVehicle = null;
+            while (firstVehicle == null || vehicleActions.get(firstVehicle).isEmpty()) {
+                firstVehicle = vehicles.get(new Random().nextInt(vehicles.size()));
+            }
+
+            Vehicle secondVehicle = null;
+            while (secondVehicle == null || secondVehicle == firstVehicle) {
+                secondVehicle = vehicles.get(new Random().nextInt(vehicles.size()));
+            }
+
+            LinkedList<TaskAction> firstVehicleActions = (LinkedList<TaskAction>) vehicleActions.get(firstVehicle).clone();
+            LinkedList<TaskAction> secondVehicleActions = (LinkedList<TaskAction>) vehicleActions.get(secondVehicle).clone();
+
+            //    double initialCost = vehicleCost(firstVehicle, candidate.get(firstVehicle)) + vehicleCost(secondVehicle, candidate.get(secondVehicle));
+
+            //remove corresponding TaskActions from firstVehicle
+            int i1 = new Random().nextInt(firstVehicleActions.size());
+            Task taskToSeek = firstVehicleActions.get(i1).getTask();
+
+            Iterator<TaskAction> it = firstVehicleActions.iterator();
+            while (it.hasNext()) {
+                if (it.next().getTask() == taskToSeek) {
+                    it.remove();
+                }
+            }
+
+            TaskAction pickupTask = new TaskAction(taskToSeek, PickupDelivery.PICKUP);
+            TaskAction deliveryTask = new TaskAction(taskToSeek, PickupDelivery.DELIVERY);
+
+
+            //add them to secondVehicle. try to find insert positions so that cost of second vehicle is
+            //less than 'secondVehicleCostTreshold'
+
+            int firstIndex = new Random().nextInt(secondVehicleActions.size() + 1); // +1 to add to end
+            secondVehicleActions.add(firstIndex, pickupTask);
+
+            int secondIndex = firstIndex + 1 + new Random().nextInt(secondVehicleActions.size() - firstIndex);
+            secondVehicleActions.add(secondIndex, deliveryTask);
+
+            if (isValid(secondVehicleActions, secondVehicle)) {
+                candidate.put(firstVehicle, firstVehicleActions);
+                candidate.put(secondVehicle, secondVehicleActions);
+                return candidate;
+            }
+        }
+        return null;
     }
 
     private static boolean isValid(LinkedList<TaskAction> actions, Vehicle vehicle) {
