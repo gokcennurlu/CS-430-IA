@@ -44,7 +44,7 @@ public class Auction implements AuctionBehavior {
 	
 	
 	private final double P = 0.5;
-    private final long NUMBER_OF_ITERATIONS = 10000;
+    private final long NUMBER_OF_ITERATIONS = 1000;
     private final long NUMBER_OF_NEIGHBOURS_GENERATED = 100;
     
 	private double probDist;
@@ -104,6 +104,7 @@ public class Auction implements AuctionBehavior {
 
 		if (winner == agent.id()) {
 			currentCity = previous.deliveryCity;
+			this.tasks.add(previous);
 		}
 	}
 	
@@ -116,6 +117,9 @@ public class Auction implements AuctionBehavior {
 		
 		if (nTasks <= 10) {
 			bid = (Auction.relativeCost[10] + Auction.stdCost[10]) * this.probDist;
+		} else if (nTasks >= 30) {
+			
+			bid = (Auction.relativeCost[29] + Auction.stdCost[29]) * this.probDist;
 		} else {
 			bid = (Auction.relativeCost[nTasks] + Auction.stdCost[nTasks]) * this.probDist;
 		}
@@ -127,6 +131,14 @@ public class Auction implements AuctionBehavior {
 	public List<Plan> plan(List<Vehicle> vehicles, TaskSet tasks) {
 		
 //		System.out.println("Agent " + agent.id() + " has tasks " + tasks);
+		
+		if (tasks.isEmpty()) {
+			ArrayList<Plan> plans = new ArrayList<Plan>();
+			for (Vehicle v: vehicles) {
+				plans.add(new Plan(v.getCurrentCity()));
+			}
+			return plans;
+		}
 
 		initializePlan(vehicles, tasks);
 

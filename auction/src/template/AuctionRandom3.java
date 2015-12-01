@@ -67,8 +67,21 @@ public class AuctionRandom3 implements AuctionBehavior {
 		double ratio = 1.0 + (random.nextDouble() * -0.50 * task.id);
 		double bid = ratio * marginalCost;
 
-		return (long) 500;
+		return (long) (835);
 //		return (long) Math.round(bid);
+	}
+	
+	private Double getProbDist() {
+		double expectedDistance = 0;
+		
+		for (City c1: topology.cities()) {
+			for (City c2: topology.cities())
+				expectedDistance += c1.distanceTo(c2) * distribution.probability(c1, c2);
+		}
+		
+		expectedDistance /= Math.pow(topology.cities().size(), 2);
+		
+		return expectedDistance;
 	}
 
 	@Override
