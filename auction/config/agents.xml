@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<agents>
+	<!-- A list of agents and their behavior classes -->
+	
+	<!-- #### AUCTION AGENTS ### -->
+	<agent name="auction-random1">
+		<set class-path="bin/"/>
+		<set class-name="template.AuctionRandom1"/>
+	</agent>
+	
+	<agent name="auction-random2">
+		<set class-path="bin/"/>
+		<set class-name="template.AuctionRandom2"/>
+	</agent>
+	
+	<agent name="auction-random3">
+		<set class-path="bin/"/>
+		<set class-name="template.AuctionRandom3"/>
+	</agent>
+	
+	<agent name="auction">
+		<set class-path="bin/"/>
+		<set class-name="template.Auction"/>
+	</agent>
+	
+</agents>
