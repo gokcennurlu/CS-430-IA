@@ -32,7 +32,7 @@ public class Centralized implements CentralizedBehavior {
     private long timeout_plan;
 
     private final double P = 0.5;
-    private final long NUMBER_OF_ITERATIONS = 10000;
+    private final long NUMBER_OF_ITERATIONS = 50000;
     private final long NUMBER_OF_NEIGHBOURS_GENERATED = 150;
 
     private HashMap<Vehicle, LinkedList<TaskAction>> vehicleActions;
@@ -106,6 +106,8 @@ public class Centralized implements CentralizedBehavior {
         prettyPrint(currentBest);
 
         List<Plan> plans = new ArrayList<Plan>();
+        
+        vehicleActions = currentBest;
 
         for (Vehicle v : vehicles) {
             plans.add(getVehiclePlan(v));
