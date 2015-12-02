@@ -67,7 +67,7 @@ public class AuctionRandom3 implements AuctionBehavior {
 		double ratio = 1.0 + (random.nextDouble() * -0.50 * task.id);
 		double bid = ratio * marginalCost;
 
-		return (long) (835);
+		return (long) (1200 + (Math.random() * 200 - 100));
 //		return (long) Math.round(bid);
 	}
 	

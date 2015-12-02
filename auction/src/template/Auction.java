@@ -35,33 +35,34 @@ public class Auction implements AuctionBehavior {
 	private Topology topology;
 	private TaskDistribution distribution;
 	private Agent agent;
-	private Random random;
-	private Vehicle vehicle;
-	private City currentCity;
-	private ArrayList<Task> tasks;
+	private List<Vehicle> vehicles;
+	private List<Task> tasks = new ArrayList<Task>();
 	
 	private HashMap<Vehicle, LinkedList<TaskAction>> vehicleActions;
 	
 	
 	private final double P = 0.5;
-    private final long NUMBER_OF_ITERATIONS = 1000;
+    private final long NUMBER_OF_ITERATIONS = 3000;
     private final long NUMBER_OF_NEIGHBOURS_GENERATED = 100;
     
 	private double probDist;
+	private double expectedWeight;
 	
-	private static Double[] relativeCost = {72.53229085,  62.76702683,  56.27905611,  51.18460038,  46.83434602,
-	         						 		43.33172275,  40.16169398,  37.47419601,  35.10735268,  32.78082349,
-	         						 		30.99231227,  29.62498571,  28.32739963,  27.06917061,  25.99423901,
-	         						 		25.0648311,   24.29343858,  23.49816073,  22.96113556,  22.62625053,
-	         						 		22.16498332,  21.82078866,  21.54757402,  21.27267976,  20.96656143,
-	         						 		20.72181377,  20.6519584,   20.33708508,  20.23479885,  20.04374474};
+	private double offset = 0;
+	
+	private static Double[] relativeCost = {292.39721251811449, 250.19311178891138, 223.3364512888997, 203.65685722424573, 186.06612443375516, 
+		  									172.190616249333, 160.1163853010473, 149.94706327484013, 141.34619674511441, 133.41919424678204, 
+		  									127.48861861500615, 122.27127163505274, 118.08310394272384, 113.85651764489593, 110.43018402418167, 
+		  									107.49786873321126, 104.70926663374449, 102.39462967264383, 100.57591994061242, 99.409970220229852, 
+		  									97.629300087767177, 96.433769468693256, 95.609902768125707, 94.763123555142002, 93.67094357339947, 
+		  									92.874824999182252, 92.38782166591055, 91.480110339014857, 91.390512203990582, 90.628732620524531};
 
-	private static Double[] stdCost = {37.7160012649, 21.903644033, 17.394863267, 13.9894612435, 12.0290776211,
-	                   				   10.5180192608, 8.95592129026, 7.86955648946, 6.95324604716, 6.4505197325,
-	                   				   6.03729345193, 5.49782047656, 5.17289482591, 5.05492585293, 4.74854459112,
-	                   				   4.54875299158, 4.29993084859, 4.31248733566, 4.1849076903, 4.20259017841,
-	                   				   3.91511100545, 3.8535743298, 3.72516359229, 3.75616045505, 3.76483734618,
-	                   				   3.62209282896, 3.62855431103, 3.60829406413, 3.58761525734, 3.53657227031};
+	private static Double[] stdCost = {174.12026995848635, 113.72423920217895, 91.587188792844898, 76.159143227576237, 66.212674988307029, 
+		  							   58.182474020136446, 51.332419888630504, 45.834058622421502, 41.138798835320301, 37.127237433333605, 
+		  							   33.87725412493117, 31.015873229753314, 28.665329041512688, 26.752348321936317, 24.72689519247443, 
+		  							   23.198406028870096, 21.772094144934727, 20.838135320994066, 20.181441907269768, 19.97504325149589, 
+		  							   18.892739236914828, 18.536248731521237, 18.183039798115519, 17.877122784756029, 17.614214060237032, 
+		  							   17.215959803034139, 17.202344537508274, 17.01299031835222, 16.935462033732463, 16.927320383707762};
 	
 	@Override
 	public void setup(Topology topology, TaskDistribution distribution,
@@ -70,13 +71,7 @@ public class Auction implements AuctionBehavior {
 		this.topology = topology;
 		this.distribution = distribution;
 		this.agent = agent;
-		this.vehicle = agent.vehicles().get(0);
-		this.currentCity = vehicle.homeCity();
-		
-		this.tasks = new ArrayList<Task>();
-
-		long seed = -9019554669489983951L * currentCity.hashCode() * agent.id();
-		this.random = new Random(seed);
+		this.vehicles = agent.vehicles();
 		
 		this.setProbDist();
 		
@@ -84,26 +79,33 @@ public class Auction implements AuctionBehavior {
 	
 	private void setProbDist() {
 		double expectedDistance = 0;
+		double expectedWeight = 0;
 		
 		for (City c1: topology.cities()) {
-			for (City c2: topology.cities())
+			for (City c2: topology.cities()) {
 				expectedDistance += c1.distanceTo(c2) * distribution.probability(c1, c2);
+				expectedWeight += this.distribution.weight(c1, c2);
+			}
 		}
 		
 		expectedDistance /= Math.pow(topology.cities().size(), 2);
+		expectedWeight /= Math.pow(topology.cities().size(), 2);
+		
+		System.out.println(expectedWeight);
 		
 		this.probDist = expectedDistance;
+		this.expectedWeight = expectedWeight;
 	}
 
 	@Override
 	public void auctionResult(Task previous, int winner, Long[] bids) {
 		for (Long b : bids) {
-			System.out.print(b + ", ");
+//			System.out.print(b + ", ");
 		}
-		System.out.println();
+//		System.out.println();
 
 		if (winner == agent.id()) {
-			currentCity = previous.deliveryCity;
+			
 			this.tasks.add(previous);
 		}
 	}
@@ -113,23 +115,62 @@ public class Auction implements AuctionBehavior {
 	public Long askPrice(Task task) {
 		
 		int nTasks = this.tasks.size();
+//		System.out.println(nTasks);
 		double bid;
 		
 		if (nTasks <= 10) {
-			bid = (Auction.relativeCost[10] + Auction.stdCost[10]) * this.probDist;
+			bid = getBid(10, false);
 		} else if (nTasks >= 30) {
 			
-			bid = (Auction.relativeCost[29] + Auction.stdCost[29]) * this.probDist;
+			bid = getBid(29, false);
 		} else {
-			bid = (Auction.relativeCost[nTasks] + Auction.stdCost[nTasks]) * this.probDist;
+			bid = getBid(nTasks, false);
 		}
+		
+//		if (nTasks >= 10 && nTasks % 5 == 0) {
+//			this.plan(this.vehicles, this.tasks);
+//			double currentCost = this.totalCost(this.vehicleActions);
+//			System.out.println(currentCost / nTasks + " : " + bid);
+//		}
 		
 		return (long) Math.round(bid);
 	}
+	
+	public double getBid(int taskNo, boolean std) {
+		
+		double maxCap = 0;
+		for (Vehicle v : this.vehicles) {
+			double cap = (v.capacity() * 3) / (v.costPerKm() * this.expectedWeight);
+			if (cap > maxCap) {
+				maxCap = cap;
+			}
+		}
+		
+		
+		double bid = (relativeCost[taskNo] / Math.pow(maxCap, 0.7)) * Math.pow(probDist, 0.9);
+		
+		
+		
+		if (std) {
+			bid += stdCost[taskNo];
+		}
+		
+		System.out.println("relativeCost[" + taskNo + "] " + relativeCost[taskNo]);
+		System.out.println("maxCap " + maxCap);
+		System.out.println("probDist " + Math.pow(probDist, 0.9));
+		System.out.println("bid " + bid);
+		return bid;
+	}
 
+	
 	@Override
 	public List<Plan> plan(List<Vehicle> vehicles, TaskSet tasks) {
+		ArrayList<Task> taskList = new ArrayList<Task>(tasks);
+		return this.plan(vehicles, taskList);
+	}
+	
 		
+	public List<Plan> plan(List<Vehicle> vehicles, List<Task> tasks) {
 //		System.out.println("Agent " + agent.id() + " has tasks " + tasks);
 		
 		if (tasks.isEmpty()) {
@@ -151,7 +192,7 @@ public class Auction implements AuctionBehavior {
             p -= P/NUMBER_OF_ITERATIONS;
 
             PriorityQueue<HashMap<Vehicle, LinkedList<TaskAction>>> neighbours = this.getNeighbors(vehicleActions, vehicles);
-            System.out.println("\n" + i + ". iteration");
+//            System.out.println("\n" + i + ". iteration");
 
             double oldCost = totalCost(vehicleActions);
             
@@ -173,11 +214,11 @@ public class Auction implements AuctionBehavior {
                 currentBestScore = totalCost(vehicleActions);
             }
 
-            System.out.println("Cost: " + totalCost(vehicleActions));
+//            System.out.println("Cost: " + totalCost(vehicleActions));
             prettyPrint(vehicleActions);
         }
 
-        System.out.println("\nBest:");
+//        System.out.println("\nBest:");
         System.out.println(currentBestScore);
         prettyPrint(currentBest);
 
@@ -192,7 +233,7 @@ public class Auction implements AuctionBehavior {
         return plans;
 	}
 	
-	private void initializePlan(List<Vehicle> vehicles, TaskSet tasks) {
+	private void initializePlan(List<Vehicle> vehicles, List<Task> tasks) {
 
         Vehicle first = vehicles.get(0);
 
@@ -234,7 +275,7 @@ public class Auction implements AuctionBehavior {
 	
 	private <K, V> void prettyPrint(HashMap<K, V> actionMap) {
         for (K k : actionMap.keySet()) {
-            System.out.println(((Vehicle) k).name() + ": " + actionMap.get(k));
+//            System.out.println(((Vehicle) k).name() + ": " + actionMap.get(k));
         }
     }
 	
