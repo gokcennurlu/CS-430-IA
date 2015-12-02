@@ -4,16 +4,16 @@
 
 	<!-- the list of cities in the topology -->
 	<cities>
-		<city x="484" y="565" name="London"/>
+		<city x="206" y="568" name="Cardiff"/>
 		<city x="349" y= "36" name="Newcastle"/>
+		<city x="118" y="729" name="Plymouth"/>
+		<city x="613" y="399" name="Norwich"/>
+		<city x="292" y="270" name="Manchester"/>
+		<city x="484" y="565" name="London"/>
 		<city x="355" y="220" name="Leeds"/>
 		<city x="362" y="284" name="Sheffield"/>
 		<city x="323" y="420" name="Birmingham"/>
-		<city x="206" y="568" name="Cardiff"/>
-		<city x="118" y="729" name="Plymouth"/>
-		<city x="613" y="399" name="Norwich"/>
 		<city x="225" y="279" name="Liverpool"/>
-		<city x="292" y="270" name="Manchester"/>
 		<city x="397" y="667" name="Portsmouth"/>
 	</cities>
 

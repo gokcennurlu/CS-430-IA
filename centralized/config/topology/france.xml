@@ -6,13 +6,13 @@
 	<!-- the list of cities in the topology -->
 	<cities>
 		<city x= "14" y="117" name="Brest" />
-		<city x="222" y= "41" name="Le Havre" />
 		<city x="324" y= "87" name="Paris"/>
-		<city x="190" y="353" name="Bordeaux"/>
 		<city x="462" y="451" name="Marseille"/>
-		<city x="438" y="295" name="Lyon"/>
 		<city x="496" y="263" name="Genève"/>
 		<city x="556" y="421" name="Monaco"/>
+		<city x="222" y= "41" name="Le Havre" />
+		<city x="190" y="353" name="Bordeaux"/>
+		<city x="438" y="295" name="Lyon"/>
 		<city x="570" y="105" name="Strasbourg"/>
 	</cities>
 

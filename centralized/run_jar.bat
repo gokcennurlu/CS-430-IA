@@ -1,0 +1,1 @@
+java -jar -Duser.country=US -Duser.language=en centralized.jar config/centralized.xml centralized
